@@ -12,15 +12,15 @@ SELECT
     WHEN '2019-11-29' THEN 'Black Friday'
     WHEN '2019-12-02' THEN 'Cyber Monday'
   END AS evento
-FROM UNNEST(GENERATE_DATE_ARRAY('2016-09-01', '2020-03-31')) AS d;
+FROM UNNEST(GENERATE_DATE_ARRAY('2016-09-01', '2020-04-30')) AS d;
 
 -- One category per product, taken from Oct-Nov 2019 (Kaggle files). The December file (data.rees46.com
 -- mirror) uses a different category_id / category_code numbering: 76 % of December purchases carry a code
 -- that contradicts the product's Oct-Nov code (e.g. Samsung smartphones as construction.tools.light).
--- Products first seen from December on (2.2 % of December purchases, 16 % of March 2020) are classified
--- through a bridge: each new category_id takes the Oct-Nov top-level category that most of its products
--- (those present in both periods) had, if it has at least 5 such products and 80 % of them agree.
--- Measured on Jan-Mar 2020: 486 new ids with >= 5 shared products, mean agreement 96 %.
+-- Products first seen from December on (2.2 % of December purchases, 16 % of March, 22 % of April 2020) are
+-- classified through a bridge: each new category_id takes the Oct-Nov top-level category that most of its
+-- products (those present in both periods) had, if it has at least 5 such products and 80 % of them agree.
+-- Measured on Dec 2019-Apr 2020: 977 new ids with >= 5 shared products, mean agreement 94 %, 862 pass 80 %.
 CREATE OR REPLACE TABLE ecommerce.dim_producto CLUSTER BY product_id AS
 WITH cat_ref AS (  -- most frequent category per product in the reference months
   SELECT product_id, category_id, category_code
