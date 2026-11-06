@@ -96,6 +96,7 @@ BigQuery almacenamiento lógico activo 0,02 USD/GB-mes con los primeros 10 GB gr
 | Pub/Sub | ~7 GB, dentro de los 10 GiB gratis |
 | Almacenamiento después de la demo | < 1 USD/mes (45 GB en BigQuery, 7,2 GB en Cloud Storage) |
 | Costo por pedido | 4,35 USD / 2 372 739 pedidos = 0,0018 USD por 1 000 pedidos (sin contar la VM temporal; consultas a precio de lista aunque caen en el TiB gratis) |
+| Todo el proyecto a la fecha (desarrollo, carga ene–mar 2020, pronóstico) | 962 consultas, 1,018 TiB facturados (`INFORMATION_SCHEMA.JOBS_BY_PROJECT`): ~0,11 USD tras el TiB gratis del mes, 6,36 USD a precio de lista. Con Dataflow (~1,05) y las dos VMs de ingesta (~0,70): ~2 USD, como máximo ~8 USD |
 
 **Nota:** el costo de la VM de ingesta (descarga y reproducción) no estaba en el documento; agregarla como
 componente temporal que se elimina al terminar (`infra/99_teardown.sh`).

@@ -44,7 +44,7 @@ Transversal:
 | Streaming | 3 replays (17/11 a 10x; Black Friday y Cyber Monday a 60x): 9 990 850 mensajes publicados y ninguno perdido. Dataflow escala de 1 a 2 workers, con lag máximo de 7 s. |
 | Deduplicación | Se eliminaron 21 696 eventos repetidos: duplicados del CSV de origen y reentregas de Pub/Sub. |
 | Calidad | El archivo de diciembre trae una taxonomía distinta (76 % de las compras con categoría contradictoria). Se corrigió por producto y quedó un control automático que lo detecta. |
-| Costo | Unos US$4,35 por todo el procesamiento, aprox. US$0,0018 por cada 1 000 pedidos. |
+| Costo | La demostración (carga oct–dic y 3 replays) costó unos US$4,35, aprox. US$0,0018 por cada 1 000 pedidos. Todo el proyecto a la fecha, con desarrollo, la carga de 2020 y el pronóstico, suma ~US$2 (hasta ~US$8 si el TiB gratis del mes ya estaba usado). |
 | Pronóstico | ARIMA_PLUS por categoría, entrenado con 2019 y validado contra ene–mar 2020 reales: error de 36 % en ene–feb contra 20 % de un promedio simple. Con tres meses de historia no supera la referencia; el intervalo de 90 % cubre el 93,5 % de los días (ver `docs/correcciones_documento.md`, sección 6). |
 
 ## Estructura
