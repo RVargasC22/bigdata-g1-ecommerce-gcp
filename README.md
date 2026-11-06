@@ -45,7 +45,7 @@ Transversal:
 | Deduplicación | Se eliminaron 21 696 eventos repetidos: duplicados del CSV de origen y reentregas de Pub/Sub. |
 | Calidad | El archivo de diciembre trae una taxonomía distinta (76 % de las compras con categoría contradictoria). Se corrigió por producto y quedó un control automático que lo detecta. |
 | Costo | Unos US$4,35 por todo el procesamiento, aprox. US$0,0018 por cada 1 000 pedidos. |
-| Pronóstico | ARIMA_PLUS por categoría, entrenado con 2019 y validado contra ene–mar 2020 reales (ver `docs/correcciones_documento.md`). |
+| Pronóstico | ARIMA_PLUS por categoría, entrenado con 2019 y validado contra ene–mar 2020 reales: error de 36 % en ene–feb contra 20 % de un promedio simple. Con tres meses de historia no supera la referencia; el intervalo de 90 % cubre el 93,5 % de los días (ver `docs/correcciones_documento.md`, sección 6). |
 
 ## Estructura
 
@@ -156,9 +156,12 @@ Los resultados de cada prueba están en `docs/evidencia/` y su lectura en `docs/
 - **Taxonomía desde diciembre.**
   - Los archivos del espejo (dic 2019 – mar 2020) numeran `category_id` / `category_code` distinto que Kaggle. Ejemplo: smartphones Samsung como `construction.tools.light`.
   - La categoría se toma por producto desde oct–nov (`dim_producto`) y `fact_eventos` la usa en lugar del código del evento.
+  - Los productos nuevos desde diciembre se clasifican con un puente: cada `category_id` nuevo toma la categoría de oct–nov de la mayoría de sus productos compartidos (al menos 5 y 80 % de acuerdo).
   - `sql/18_chequeos.sql` falla si una categoría salta más de 4x en una semana.
 - **Inventario derivado (supuesto).** Stock fijo de 50 unidades por producto cada lunes; cada `purchase` resta una unidad. `quiebre = true` cuando la demanda de la semana alcanza el stock.
 - **Pronóstico.** ARIMA_PLUS con una serie diaria de compras por categoría. Se entrena solo con 2019 y se compara contra ene–mar 2020 reales, que el modelo nunca vio. Marzo incluye el confinamiento por COVID-19 en Rusia.
+  - Cada error se compara con una referencia ingenua: el promedio oct–dic 2019 de cada categoría. Con tres meses de historia ARIMA no la supera; se necesita al menos un año.
+  - Los días en que el origen dejó de registrar compras (14–15 nov 2019, 1–2 ene 2020) se excluyen del entrenamiento y de la evaluación (`v_dias_compras_incompletas`).
 - **Zonas horarias.** REES46 ya viene en UTC; Olist se convierte de `America/Sao_Paulo` a UTC.
 - **Tableros.** Looker Studio lee solo tablas `agg_*`, `ml_*` y la vista materializada `mv_eventos_hora`, nunca `events_raw`.
 - **Infraestructura como código.**

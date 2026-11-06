@@ -247,3 +247,40 @@ mensajes malformados.
   estado de Terraform), el presupuesto y el glosario. `.github/workflows/ci.yml` valida Terraform, shell,
   Python, JSON y la UDF de Dataflow en cada push, y en `main` corre `terraform plan` y un dry run del SQL
   con Workload Identity Federation (sin llaves). El `apply` queda manual y revisado.
+
+### 6. Pronóstico de demanda (BigQuery ML)
+
+- **Datos de validación.** Para medir el pronóstico con datos que el modelo nunca vio se cargaron enero,
+  febrero y marzo de 2020 del mismo espejo (55,8 M, 54,6 M y 56,2 M eventos; 0,83 M, 1,05 M y 1,02 M
+  compras). La descarga corre en una VM efímera que se borra sola a los 30 min (`ingest/fetch_2020.sh`) y la
+  carga en `sql/20_carga_2020.sql`. En total, `events_raw` queda con unos 344 M eventos (oct 2019 – mar 2020).
+- **Preparación de la serie.**
+  - Taxonomía: los productos que aparecen recién desde diciembre (2,2 % de las compras de diciembre, 16 % en
+    marzo) no tienen categoría de oct–nov. `dim_producto` los clasifica con un puente: cada `category_id`
+    nuevo toma la categoría de oct–nov de la mayoría de sus productos compartidos, si son al menos 5 y el 80 %
+    coincide (486 ids, acuerdo medio 96 %).
+  - Días incompletos: el 14–15 nov 2019 y el 1–2 ene 2020 el origen dejó de registrar compras mientras la
+    navegación seguía. Se detectan solos (compras/eventos < 60 % de la mediana, vista
+    `v_dias_compras_incompletas`) y se excluyen del entrenamiento y de la evaluación.
+  - Dos chequeos nuevos en `sql/18_chequeos.sql`: una categoría que se multiplica o divide por más de 4 en una
+    semana (habría detectado el salto de diciembre) y una proporción de compras sin categoría mayor al 35 %.
+- **Modelo.** ARIMA_PLUS con una serie diaria de compras por categoría (las 8 con al menos 100 compras al día),
+  entrenado solo hasta el 31 dic 2019, horizonte de 91 días e intervalo de 90 %. Cada error se compara con una
+  referencia ingenua: el promedio diario oct–dic 2019 de cada categoría, constante.
+- **Resultado (WAPE, todas las categorías).**
+
+  | Tramo | ARIMA_PLUS | Referencia (promedio) |
+  |---|---|---|
+  | 1–14 ene (dos semanas) | 44,5 % | 11,4 % |
+  | ene–feb | 36,1 % | 19,9 % |
+  | marzo (confinamiento COVID-19) | 35,3 % | 26,2 % |
+
+  En ene–feb, ARIMA gana en muebles, ropa y automotriz, y pierde en electrónica, cómputo, construcción,
+  electrodomésticos y niños. El intervalo de 90 % contiene el 93,5 % de los días reales: está bien calibrado.
+- **Lectura.** Con tres meses de historia ARIMA no supera al promedio: proyecta hacia 2020 el nivel alto de
+  diciembre (sesgo positivo) y no puede aprender la estacionalidad anual (campañas de noviembre, Año Nuevo).
+  Hace falta al menos un año de historia. Hasta entonces el promedio es la referencia que cualquier modelo
+  debe superar, y el intervalo de ARIMA sirve para dimensionar el stock de seguridad.
+- **Costo.** Entrenar y evaluar lee solo la tabla gold `agg_embudo_categoria_dia` (KB). Con seis meses de
+  datos, reconstruir silver y gold desde cero factura unos 67 GB, más que el tope de 50 GB por script de
+  `sql/run.sh`.
