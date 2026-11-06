@@ -282,5 +282,5 @@ mensajes malformados.
   Hace falta al menos un año de historia. Hasta entonces el promedio es la referencia que cualquier modelo
   debe superar, y el intervalo de ARIMA sirve para dimensionar el stock de seguridad.
 - **Costo.** Entrenar y evaluar lee solo la tabla gold `agg_embudo_categoria_dia` (KB). Con seis meses de
-  datos, reconstruir silver y gold desde cero factura unos 67 GB, más que el tope de 50 GB por script de
-  `sql/run.sh`.
+  datos, reconstruir silver y gold desde cero factura unos 67 GB (unos 0,41 USD a precio de lista), por lo que
+  el tope por script de `sql/run.sh` (`MAX_BYTES_BILLED`) se subió de 50 GB a 100 GB.
