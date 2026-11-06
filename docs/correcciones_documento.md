@@ -96,7 +96,7 @@ BigQuery almacenamiento lógico activo 0,02 USD/GB-mes con los primeros 10 GB gr
 | Pub/Sub | ~7 GB, dentro de los 10 GiB gratis |
 | Almacenamiento después de la demo | < 1 USD/mes (45 GB en BigQuery, 7,2 GB en Cloud Storage) |
 | Costo por pedido | 4,35 USD / 2 372 739 pedidos = 0,0018 USD por 1 000 pedidos (sin contar la VM temporal; consultas a precio de lista aunque caen en el TiB gratis) |
-| Todo el proyecto a la fecha (desarrollo, carga ene–mar 2020, pronóstico) | 962 consultas, 1,018 TiB facturados (`INFORMATION_SCHEMA.JOBS_BY_PROJECT`): ~0,11 USD tras el TiB gratis del mes, 6,36 USD a precio de lista. Con Dataflow (~1,05) y las dos VMs de ingesta (~0,70): ~2 USD, como máximo ~8 USD |
+| Todo el proyecto a la fecha (desarrollo, carga ene–abr 2020, pronósticos) | 1 029 consultas, 0,65 TiB facturados en consultas (`INFORMATION_SCHEMA.JOBS_BY_PROJECT`, sin contar dos veces los scripts padre): dentro del TiB gratis del mes, ~4 USD a precio de lista. Con Dataflow (~1,05) y las VMs de ingesta (~0,75): ~2 USD, como máximo ~6 USD. Aparte, el `CREATE MODEL` de XGBoost (`sql/18`) facturó 50,9 GB con la tarifa de BigQuery ML; su costo exacto queda por confirmar en el reporte de facturación |
 
 **Nota:** el costo de la VM de ingesta (descarga y reproducción) no estaba en el documento; agregarla como
 componente temporal que se elimina al terminar (`infra/99_teardown.sh`).
@@ -251,22 +251,23 @@ mensajes malformados.
 
 ### 6. Pronóstico de demanda (BigQuery ML)
 
-- **Datos de validación.** Para medir el pronóstico con datos que el modelo nunca vio se cargaron enero,
-  febrero y marzo de 2020 del mismo espejo (55,8 M, 54,6 M y 56,2 M eventos; 0,83 M, 1,05 M y 1,02 M
-  compras). La descarga corre en una VM efímera que se borra sola a los 30 min (`ingest/fetch_2020.sh`) y la
-  carga en `sql/17_load_2020.sql`. En total, `events_raw` queda con unos 344 M eventos (oct 2019 – mar 2020).
+- **Datos de validación.** Para medir el pronóstico con datos que el modelo nunca vio se cargaron enero a
+  abril de 2020 del mismo espejo (55,8 M, 54,6 M, 56,2 M y 66,5 M eventos; 0,83 M, 1,05 M, 1,02 M y 0,97 M
+  compras). El dataset público termina en abril 2020 (mayo en adelante no existe en el espejo). La descarga
+  corre en una VM efímera que se borra sola a los 30 min (`ingest/fetch_2020.sh`) y la carga en
+  `sql/17_load_2020.sql`. En total, `events_raw` queda con 410 M eventos (oct 2019 – abr 2020).
 - **Preparación de la serie.**
   - Taxonomía: los productos que aparecen recién desde diciembre (2,2 % de las compras de diciembre, 16 % en
-    marzo) no tienen categoría de oct–nov. `dim_producto` los clasifica con un puente: cada `category_id`
+    marzo, 22 % en abril) no tienen categoría de oct–nov. `dim_producto` los clasifica con un puente: cada `category_id`
     nuevo toma la categoría de oct–nov de la mayoría de sus productos compartidos, si son al menos 5 y el 80 %
-    coincide (486 ids, acuerdo medio 96 %).
+    coincide (977 ids con al menos 5 productos compartidos, acuerdo medio 94 %; 862 pasan el 80 %).
   - Días incompletos: el 14–15 nov 2019 y el 1–2 ene 2020 el origen dejó de registrar compras mientras la
     navegación seguía. Se detectan solos (compras/eventos < 60 % de la mediana, vista
     `v_dias_compras_incompletas`) y se excluyen del entrenamiento y de la evaluación.
   - Dos chequeos nuevos en `sql/15_checks.sql`: una categoría que se multiplica o divide por más de 4 en una
     semana (habría detectado el salto de diciembre) y una proporción de compras sin categoría mayor al 35 %.
 - **Modelo.** ARIMA_PLUS con una serie diaria de compras por categoría (las 8 con al menos 100 compras al día),
-  entrenado solo hasta el 31 dic 2019, horizonte de 91 días e intervalo de 90 %. Cada error se compara con una
+  entrenado solo hasta el 31 dic 2019, horizonte de 121 días e intervalo de 90 %. Cada error se compara con una
   referencia ingenua: el promedio diario oct–dic 2019 de cada categoría, constante.
 - **Resultado (WAPE, todas las categorías).**
 
@@ -275,6 +276,7 @@ mensajes malformados.
   | 1–14 ene (dos semanas) | 44,5 % | 11,4 % |
   | ene–feb | 36,1 % | 19,9 % |
   | marzo (confinamiento COVID-19) | 35,3 % | 26,2 % |
+  | abril (confinamiento COVID-19) | 39,2 % | 21,3 % |
 
   En ene–feb, ARIMA gana en muebles, ropa y automotriz, y pierde en electrónica, cómputo, construcción,
   electrodomésticos y niños. El intervalo de 90 % contiene el 93,5 % de los días reales: está bien calibrado.
@@ -282,6 +284,35 @@ mensajes malformados.
   diciembre (sesgo positivo) y no puede aprender la estacionalidad anual (campañas de noviembre, Año Nuevo).
   Hace falta al menos un año de historia. Hasta entonces el promedio es la referencia que cualquier modelo
   debe superar, y el intervalo de ARIMA sirve para dimensionar el stock de seguridad.
+- **Experimento de control con Olist (`sql/18_forecast_olist.sql`).** Para separar "falta historia" de "falta
+  modelo" se repitió la prueba con Olist, que tiene 17 meses antes del corte (ene 2017 – may 2018, con un Black
+  Friday). Series: pedidos diarios de las 6 categorías con al menos 15 pedidos al día más el total. Prueba:
+  1 jun – 22 ago 2018 (los días siguientes están incompletos en el dataset público). Cinco métodos:
+  - ARIMA_PLUS con 17 meses y con 3 meses (la misma historia que REES46), con feriados de Brasil.
+  - XGBoost (`BOOSTED_TREE_REGRESSOR`) directo a 1–83 días: orígenes semanales desde abril 2017, objetivo =
+    pedidos / promedio de los 28 días previos al origen, variables de serie, horizonte, día de semana, día del
+    mes, feriado y perfil del día de semana de las 8 semanas previas. No extrapola tendencias.
+  - TimesFM (`AI.FORECAST`), modelo preentrenado de Google sin entrenamiento propio, con los 17 meses.
+  - Promedio diario de mar–may 2018 de cada serie, constante.
+
+  | Tramo (WAPE, categorías) | ARIMA 17 m | ARIMA 3 m | XGBoost | TimesFM | Promedio 3 m |
+  |---|---|---|---|---|---|
+  | 1–14 jun | 42,7 % | 32,5 % | 29,0 % | 40,9 % | 27,2 % |
+  | jun–jul | 43,4 % | 35,6 % | 31,9 % | 42,2 % | 30,9 % |
+  | 1–22 ago | 51,7 % | 44,7 % | 24,4 % | 51,2 % | 27,6 % |
+
+  - Más historia empeora a ARIMA: con 17 meses pronostica 111 pedidos/día en la serie total contra 203 reales;
+    con 3 meses, 206. TimesFM falla igual (100). Ambos pesan mucho la última semana antes del corte, que fue
+    anormalmente baja (99–144 pedidos/día del 24 al 31 may 2018, coincide con el paro de camioneros en
+    Brasil), y además ARIMA arrastra el crecimiento de 2017.
+  - XGBoost es el único método que iguala al promedio: empata en jun–jul y gana en agosto (24,4 % contra
+    27,6 %). En la serie total, ARIMA con 3 meses es el mejor (19,1 % contra 22,7 % del promedio).
+  - Lectura: el problema no es solo el modelo. Sin dos años de datos ningún método aprende la estacionalidad
+    anual, y un corte que cae en una anomalía castiga a los modelos que siguen el nivel reciente. Un modelo de
+    árboles con variables relativas al nivel es la alternativa más robusta, pero apenas iguala a la referencia.
+  - Costo: ARIMA y TimesFM leen MB. XGBoost se entrena fuera del motor de consultas y facturó 50,9 GB con la
+    tarifa de BigQuery ML (unos 18 min); no admite `--dry_run`, por lo que el script no debe reentrenarlo sin
+    necesidad.
 - **Costo.** Entrenar y evaluar lee solo la tabla gold `agg_embudo_categoria_dia` (KB). Con seis meses de
   datos, reconstruir silver y gold desde cero factura unos 67 GB (unos 0,41 USD a precio de lista), por lo que
   el tope por script de `sql/run.sh` (`MAX_BYTES_BILLED`) se subió de 50 GB a 100 GB.

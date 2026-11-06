@@ -6,7 +6,7 @@ entregas de otra tienda, tableros en Looker Studio y pronóstico de demanda con 
 
 - **Proyecto GCP:** `bigdata-g1-ecommerce-1105` · región `us-central1` · datos en multirregión `US`.
 - **Datos:**
-  - REES46 *multi category store*: eventos de navegación y compra, oct 2019 – mar 2020. Octubre y noviembre vienen de Kaggle; diciembre a marzo, del espejo del autor.
+  - REES46 *multi category store*: eventos de navegación y compra, oct 2019 – abr 2020 (410 M eventos; el dataset público termina en abril). Octubre y noviembre vienen de Kaggle; diciembre a abril, del espejo del autor.
   - Olist: pedidos y entregas en Brasil, 2016–2018.
 
 ## Arquitectura
@@ -44,8 +44,8 @@ Transversal:
 | Streaming | 3 replays (17/11 a 10x; Black Friday y Cyber Monday a 60x): 9 990 850 mensajes publicados y ninguno perdido. Dataflow escala de 1 a 2 workers, con lag máximo de 7 s. |
 | Deduplicación | Se eliminaron 21 696 eventos repetidos: duplicados del CSV de origen y reentregas de Pub/Sub. |
 | Calidad | El archivo de diciembre trae una taxonomía distinta (76 % de las compras con categoría contradictoria). Se corrigió por producto y quedó un control automático que lo detecta. |
-| Costo | La demostración (carga oct–dic y 3 replays) costó unos US$4,35, aprox. US$0,0018 por cada 1 000 pedidos. Todo el proyecto a la fecha, con desarrollo, la carga de 2020 y el pronóstico, suma ~US$2 (hasta ~US$8 si el TiB gratis del mes ya estaba usado). |
-| Pronóstico | ARIMA_PLUS por categoría, entrenado con 2019 y validado contra ene–mar 2020 reales: error de 36 % en ene–feb contra 20 % de un promedio simple. Con tres meses de historia no supera la referencia; el intervalo de 90 % cubre el 93,5 % de los días (ver `docs/correcciones_documento.md`, sección 6). |
+| Costo | La demostración (carga oct–dic y 3 replays) costó unos US$4,35, aprox. US$0,0018 por cada 1 000 pedidos. Todo el proyecto a la fecha, con desarrollo, la carga de 2020 y el pronóstico, factura 0,65 TiB en consultas (~US$4 a precio de lista, gratis dentro del TiB mensual) más ~US$1,8 de Dataflow y VMs; el entrenamiento de XGBoost (50,9 GB, otra tarifa) está pendiente de confirmar en el reporte de facturación. |
+| Pronóstico | ARIMA_PLUS por categoría, entrenado con 2019 y validado contra ene–abr 2020 reales: error de 36 % en ene–feb contra 20 % de un promedio simple (abril: 39 % contra 21 %). Con tres meses de historia no supera la referencia; el intervalo de 90 % cubre el 93,5 % de los días. En Olist, con 17 meses de historia, tampoco ganan ARIMA ni TimesFM; XGBoost empata con el promedio (32 % contra 31 %). Ver `docs/correcciones_documento.md`, sección 6. |
 
 ## Estructura
 
@@ -96,11 +96,12 @@ python3 infra/04_fine_grained_access.py   # policy tags sobre user_id y customer
 sql/run.sh sql/12_row_access.sql          # row access policies en fact_pedidos
 ./infra/05_governance.sh                  # Dataplex: linaje + glosario (capas y descripciones: sql/11_governance.sql)
 ./infra/06_scheduled_queries.sh           # 06:00 dedup + refresco incremental (sql/14); 07:00 chequeos ASSERT (sql/15)
-sql/run.sh sql/16_forecast.sql            # pronóstico ARIMA_PLUS por categoría + validación con ene–mar 2020
+sql/run.sh sql/16_forecast.sql            # pronóstico ARIMA_PLUS por categoría + validación con ene–abr 2020
+sql/run.sh sql/18_forecast_olist.sql      # experimento Olist: ARIMA 17 y 3 meses, XGBoost, TimesFM y promedio
 ```
 
-Los scripts de IAM los corre el owner del proyecto. Para agregar solo ene–mar 2020 a una carga existente:
-`ingest/fetch_2020.sh`, que usa una VM que se borra sola, y luego `sql/17_load_2020.sql`.
+Los scripts de IAM los corre el owner del proyecto. Para agregar ene–abr 2020 a una carga existente:
+`ingest/fetch_2020.sh [meses]`, que usa una VM que se borra sola, y luego `sql/17_load_2020.sql`.
 
 ### Streaming: replay del pico
 
@@ -140,7 +141,7 @@ Los resultados de cada prueba están en `docs/evidencia/` y su lectura en `docs/
 | Cola de errores (dead-letter) | `streaming/launch_dataflow.sh` (`events_deadletter`), `streaming/udf/transform.js`, `sql/13_quality_dashboard.sql` |
 | Operación: dedup, refresco incremental, chequeos | `sql/14_incremental.sql`, `sql/15_checks.sql`, `infra/06_scheduled_queries.sh` |
 | Alertas | `monitoring/setup_alerts.sh`, `monitoring/alert_*.json` |
-| Pronóstico de demanda (BigQuery ML) | `sql/16_forecast.sql` |
+| Pronóstico de demanda (BigQuery ML) | `sql/16_forecast.sql`, `sql/18_forecast_olist.sql` |
 | Infraestructura como código y CI | `terraform/`, `.github/workflows/ci.yml` |
 
 ## Decisiones de implementación
@@ -153,14 +154,15 @@ Los resultados de cada prueba están en `docs/evidencia/` y su lectura en `docs/
   - Dataflow escribe con la Storage Write API, que permite ese `DELETE` de inmediato.
 - **Refresco incremental.** La consulta diaria procesa solo las particiones modificadas en las últimas 26 h (metadatos gratuitos), con `DELETE` + `INSERT`. El DML conserva descripciones, etiquetas y row access policies.
 - **Taxonomía desde diciembre.**
-  - Los archivos del espejo (dic 2019 – mar 2020) numeran `category_id` / `category_code` distinto que Kaggle. Ejemplo: smartphones Samsung como `construction.tools.light`.
+  - Los archivos del espejo (dic 2019 – abr 2020) numeran `category_id` / `category_code` distinto que Kaggle. Ejemplo: smartphones Samsung como `construction.tools.light`.
   - La categoría se toma por producto desde oct–nov (`dim_producto`) y `fact_eventos` la usa en lugar del código del evento.
   - Los productos nuevos desde diciembre se clasifican con un puente: cada `category_id` nuevo toma la categoría de oct–nov de la mayoría de sus productos compartidos (al menos 5 y 80 % de acuerdo).
   - `sql/15_checks.sql` falla si una categoría salta más de 4x en una semana.
 - **Inventario derivado (supuesto).** Stock fijo de 50 unidades por producto cada lunes; cada `purchase` resta una unidad. `quiebre = true` cuando la demanda de la semana alcanza el stock.
-- **Pronóstico.** ARIMA_PLUS con una serie diaria de compras por categoría. Se entrena solo con 2019 y se compara contra ene–mar 2020 reales, que el modelo nunca vio. Marzo incluye el confinamiento por COVID-19 en Rusia.
+- **Pronóstico.** ARIMA_PLUS con una serie diaria de compras por categoría. Se entrena solo con 2019 y se compara contra ene–abr 2020 reales, que el modelo nunca vio. Marzo y abril incluyen el confinamiento por COVID-19 en Rusia.
   - Cada error se compara con una referencia ingenua: el promedio oct–dic 2019 de cada categoría. Con tres meses de historia ARIMA no la supera; se necesita al menos un año.
   - Los días en que el origen dejó de registrar compras (14–15 nov 2019, 1–2 ene 2020) se excluyen del entrenamiento y de la evaluación (`v_dias_compras_incompletas`).
+  - Control con Olist (`sql/18_forecast_olist.sql`): 17 meses de historia, cinco métodos sobre jun–ago 2018. Más historia no ayuda a ARIMA y TimesFM; XGBoost con variables de nivel y día de semana empata con el promedio.
 - **Zonas horarias.** REES46 ya viene en UTC; Olist se convierte de `America/Sao_Paulo` a UTC.
 - **Tableros.** Looker Studio lee solo tablas `agg_*`, `ml_*` y la vista materializada `mv_eventos_hora`, nunca `events_raw`.
 - **Infraestructura como código.**
