@@ -1,4 +1,5 @@
-# CI: static checks on every push / pull request; plan on main with Workload Identity Federation.name: ci
+# CI: static checks on every push / pull request; plan on main with Workload Identity Federation.
+name: ci
 on:
   push:
   pull_request:
