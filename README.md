@@ -161,7 +161,7 @@ Los resultados de cada prueba están en `docs/evidencia/` y su lectura en `docs/
 - **Inventario derivado (supuesto).** Stock fijo de 50 unidades por producto cada lunes; cada `purchase` resta una unidad. `quiebre = true` cuando la demanda de la semana alcanza el stock.
 - **Pronóstico.** ARIMA_PLUS con una serie diaria de compras por categoría. Se entrena solo con 2019 y se compara contra ene–abr 2020 reales, que el modelo nunca vio. Marzo y abril incluyen el confinamiento por COVID-19 en Rusia.
   - Cada error se compara con una referencia ingenua: el promedio oct–dic 2019 de cada categoría. Con tres meses de historia ARIMA no la supera; se necesita al menos un año.
-  - Los días en que el origen dejó de registrar compras (14–15 nov 2019, 1–2 ene 2020) se excluyen del entrenamiento y de la evaluación (`v_dias_compras_incompletas`).
+  - Los días en que el origen dejó de registrar compras (14–15 nov 2019, 1–2 ene y 20–21 abr 2020) se excluyen del entrenamiento y de la evaluación (`v_dias_compras_incompletas`).
   - Control con Olist (`sql/18_forecast_olist.sql`): 17 meses de historia, cinco métodos sobre jun–ago 2018. Más historia no ayuda a ARIMA y TimesFM; XGBoost con variables de nivel y día de semana empata con el promedio.
 - **Zonas horarias.** REES46 ya viene en UTC; Olist se convierte de `America/Sao_Paulo` a UTC.
 - **Tableros.** Looker Studio lee solo tablas `agg_*`, `ml_*` y la vista materializada `mv_eventos_hora`, nunca `events_raw`.

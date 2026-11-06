@@ -261,7 +261,7 @@ mensajes malformados.
     marzo, 22 % en abril) no tienen categoría de oct–nov. `dim_producto` los clasifica con un puente: cada `category_id`
     nuevo toma la categoría de oct–nov de la mayoría de sus productos compartidos, si son al menos 5 y el 80 %
     coincide (977 ids con al menos 5 productos compartidos, acuerdo medio 94 %; 862 pasan el 80 %).
-  - Días incompletos: el 14–15 nov 2019 y el 1–2 ene 2020 el origen dejó de registrar compras mientras la
+  - Días incompletos: el 14–15 nov 2019, el 1–2 ene y el 20–21 abr 2020 el origen dejó de registrar compras mientras la
     navegación seguía. Se detectan solos (compras/eventos < 60 % de la mediana, vista
     `v_dias_compras_incompletas`) y se excluyen del entrenamiento y de la evaluación.
   - Dos chequeos nuevos en `sql/15_checks.sql`: una categoría que se multiplica o divide por más de 4 en una
