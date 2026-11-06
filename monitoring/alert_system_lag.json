@@ -14,7 +14,7 @@
     }
   ],
   "documentation": {
-    "content": "RPO < 5 min en riesgo. Revisar el job en Dataflow; si cayó: streaming/launch_dataflow.sh (Pub/Sub retiene 7 días).",
+    "content": "RPO < 5 min at risk. Check the Dataflow job; if it is down: streaming/launch_dataflow.sh (Pub/Sub keeps 7 days).",
     "mimeType": "text/markdown"
   }
 }

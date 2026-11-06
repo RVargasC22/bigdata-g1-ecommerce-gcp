@@ -23,7 +23,7 @@ resource "google_monitoring_alert_policy" "system_lag" {
     }
   }
   documentation {
-    content   = "RPO < 5 min en riesgo. Revisar el job en Dataflow; si cayó: streaming/launch_dataflow.sh (Pub/Sub retiene 7 días)."
+    content   = "RPO < 5 min at risk. Check the Dataflow job; if it is down: streaming/launch_dataflow.sh (Pub/Sub keeps 7 days)."
     mime_type = "text/markdown"
   }
 }
@@ -46,7 +46,7 @@ resource "google_monitoring_alert_policy" "pubsub_backlog" {
     }
   }
   documentation {
-    content   = "Frescura de datos: hay eventos en Pub/Sub sin procesar hace más de 10 min (job de Dataflow caído o atascado). Revisar el job; si cayó: streaming/launch_dataflow.sh (Pub/Sub retiene 7 días, no se pierde nada)."
+    content   = "Data freshness: Pub/Sub has events unprocessed for more than 10 min (Dataflow job down or stuck). Check the job; if it is down: streaming/launch_dataflow.sh (Pub/Sub keeps 7 days, nothing is lost)."
     mime_type = "text/markdown"
   }
 }
@@ -68,7 +68,7 @@ resource "google_monitoring_alert_policy" "scheduled_query" {
     }
   }
   documentation {
-    content   = "Falló refresco-diario-incremental o chequeos-calidad-diarios. Si es un ASSERT de sql/15_checks.sql, el mensaje dice cuál: crecimiento del dead-letter, agregados que no cuadran con events_raw o duplicados del streaming sin limpiar. Ver Transferencias en BigQuery."
+    content   = "refresco-diario-incremental or chequeos-calidad-diarios failed. If it is an ASSERT in sql/15_checks.sql, the message says which one: dead-letter growth, aggregates that do not match events_raw, duplicate streaming rows, a category jump or too many uncategorized purchases. See Transfers in BigQuery."
     mime_type = "text/markdown"
   }
 }

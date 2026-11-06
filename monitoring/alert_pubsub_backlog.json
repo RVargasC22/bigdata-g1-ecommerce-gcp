@@ -14,7 +14,7 @@
     }
   ],
   "documentation": {
-    "content": "Frescura de datos: hay eventos en Pub/Sub sin procesar hace más de 10 min (job de Dataflow caído o atascado). Revisar el job; si cayó: streaming/launch_dataflow.sh (Pub/Sub retiene 7 días, no se pierde nada).",
+    "content": "Data freshness: Pub/Sub has events unprocessed for more than 10 min (Dataflow job down or stuck). Check the job; if it is down: streaming/launch_dataflow.sh (Pub/Sub keeps 7 days, nothing is lost).",
     "mimeType": "text/markdown"
   }
 }

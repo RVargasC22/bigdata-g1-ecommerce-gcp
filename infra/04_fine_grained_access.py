@@ -103,4 +103,4 @@ for table, column, tag in [("events_raw", "user_id", "identificador_usuario"),
         subprocess.run(["bq", "update", ref, tmp.name], check=True, capture_output=True)
     print("tagged", f"{table}.{column}", "->", tag)
 
-print("Acceso fino OK. Filas: sql/run.sh sql/12_row_access.sql")
+print("Fine-grained access OK. Rows: sql/run.sh sql/12_row_access.sql")

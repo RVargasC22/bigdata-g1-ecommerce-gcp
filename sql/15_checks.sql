@@ -6,17 +6,17 @@
 ASSERT (
   SELECT COUNT(*) FROM ecommerce.events_deadletter
   WHERE timestamp > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)) <= 1000
-AS 'Dead-letter: más de 1 000 mensajes rechazados en 24 h (revisar events_deadletter)';
+AS 'Dead-letter: more than 1,000 rejected messages in 24 h (check events_deadletter)';
 
 -- 2. Dashboards consistent with the raw layer (every event is counted once in agg_pedidos_hora)
 ASSERT (SELECT SUM(eventos) FROM ecommerce.agg_pedidos_hora) = (SELECT COUNT(*) FROM ecommerce.events_raw)
-AS 'agg_pedidos_hora no cuadra con events_raw (falló el refresco incremental)';
+AS 'agg_pedidos_hora does not match events_raw (the incremental refresh failed)';
 
 -- 3. Curated funnel without null keys or negative values
 ASSERT NOT EXISTS (
   SELECT 1 FROM ecommerce.agg_embudo_categoria_dia
   WHERE fecha IS NULL OR categoria_comun IS NULL OR sesiones_view < 0 OR ingresos < 0)
-AS 'agg_embudo_categoria_dia con claves nulas o valores negativos';
+AS 'agg_embudo_categoria_dia has null keys or negative values';
 
 -- 4. Streaming path deduplicated (no identical stream events in the last refreshed days)
 ASSERT (
@@ -24,7 +24,7 @@ ASSERT (
                                                          category_code, brand, price, user_session)))
   FROM ecommerce.events_raw
   WHERE source = 'stream' AND ingest_time > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 48 HOUR)) = 0
-AS 'Hay eventos duplicados del streaming sin deduplicar';
+AS 'Duplicate streaming events left undeduplicated';
 
 -- 5. Taxonomy break: a category whose last-7-day average moves more than 4x against the previous 28 days
 --    (the December file relabelled smartphones as construction: x50). Peaks such as 15-17 Nov stay below 2x.
@@ -39,11 +39,11 @@ ASSERT NOT EXISTS (
     FROM d, ref GROUP BY categoria_comun)
   SELECT 1 FROM v
   WHERE prev28 >= 50 AND (ult7 > 4 * prev28 OR ult7 < prev28 / 4))
-AS 'Salto de más de 4x en una categoría: posible cambio de taxonomía en el origen (ver dim_producto)';
+AS 'A category jumped more than 4x: possible taxonomy change at the source (see dim_producto)';
 
 -- 6. Purchases without category stay near their 24 % baseline (products missing from dim_producto)
 ASSERT (
   SELECT SAFE_DIVIDE(SUM(IF(categoria_comun = 'sin_categoria', compras, 0)), SUM(compras))
   FROM ecommerce.agg_embudo_categoria_dia
   WHERE fecha > (SELECT MAX(fecha) - 7 FROM ecommerce.agg_embudo_categoria_dia)) <= 0.35
-AS 'Más de 35 % de compras sin categoría en los últimos 7 días (productos nuevos sin mapear)';
+AS 'More than 35 % of purchases without category in the last 7 days (new unmapped products)';

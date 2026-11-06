@@ -12,8 +12,8 @@ dry() {
   printf "%-45s %12.1f MB\n" "$label" "$(echo "$bytes / 1048576" | bc -l)"
 }
 
-dry "SELECT * , sin filtro"                      "SELECT * FROM ecommerce.events_raw"
-dry "3 columnas, sin filtros"                    "SELECT event_type, price, category_code FROM ecommerce.events_raw"
-dry "3 columnas, solo purchase (clustering)"     "SELECT event_type, price, category_code FROM ecommerce.events_raw WHERE event_type='purchase'"
-dry "3 columnas, 2019-11-17 (particion)"       "SELECT event_type, price, category_code FROM ecommerce.events_raw WHERE DATE(event_time)='2019-11-17' AND event_type='purchase'"
-dry "Tablero: agg_pedidos_hora"                  "SELECT hora, pedidos, ingresos FROM ecommerce.agg_pedidos_hora"
+dry "SELECT *, no filter"                        "SELECT * FROM ecommerce.events_raw"
+dry "3 columns, no filter"                       "SELECT event_type, price, category_code FROM ecommerce.events_raw"
+dry "3 columns, purchase only (clustering)"      "SELECT event_type, price, category_code FROM ecommerce.events_raw WHERE event_type='purchase'"
+dry "3 columns, 2019-11-17 (partition)"          "SELECT event_type, price, category_code FROM ecommerce.events_raw WHERE DATE(event_time)='2019-11-17' AND event_type='purchase'"
+dry "Dashboard: agg_pedidos_hora"                "SELECT hora, pedidos, ingresos FROM ecommerce.agg_pedidos_hora"

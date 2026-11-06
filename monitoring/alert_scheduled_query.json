@@ -14,7 +14,7 @@
     "autoClose": "86400s"
   },
   "documentation": {
-    "content": "Falló refresco-diario-incremental o chequeos-calidad-diarios. Si es un ASSERT de sql/15_checks.sql, el mensaje dice cuál: crecimiento del dead-letter, agregados que no cuadran con events_raw o duplicados del streaming sin limpiar. Ver Transferencias en BigQuery.",
+    "content": "refresco-diario-incremental or chequeos-calidad-diarios failed. If it is an ASSERT in sql/15_checks.sql, the message says which one: dead-letter growth, aggregates that do not match events_raw, duplicate streaming rows, a category jump or too many uncategorized purchases. See Transfers in BigQuery.",
     "mimeType": "text/markdown"
   }
 }
