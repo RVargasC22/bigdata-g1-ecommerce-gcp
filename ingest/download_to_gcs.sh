@@ -14,8 +14,8 @@ for f in rees46/*.csv; do
 done
 
 # Kaggle stops at November (20 GB limit); the dataset description points to the author's mirror for December.
-# Jan-Mar 2020 from the same mirror: real holdout for the demand forecast (sql/16_forecast.sql).
-for m in 2019-Dec 2020-Jan 2020-Feb 2020-Mar; do
+# Jan-Apr 2020 from the same mirror (the dataset ends there): real holdout for the demand forecast (sql/16_forecast.sql).
+for m in 2019-Dec 2020-Jan 2020-Feb 2020-Mar 2020-Apr; do
   curl -sSf -o "rees46/$m.csv.gz" "https://data.rees46.com/datasets/marketplace/$m.csv.gz"
   gcloud storage cp "rees46/$m.csv.gz" "gs://$BUCKET/raw/rees46/"
 done
