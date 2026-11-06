@@ -12,6 +12,18 @@
 
 DECLARE fin_entrenamiento DATE DEFAULT '2019-12-31';
 
+-- Days where the source stopped recording purchases while browsing continued (14-15 Nov 2019, 1-2 Jan 2020):
+-- purchases / events below 60 % of the median day. They are not demand, so they are left out of training and
+-- evaluation (ARIMA_PLUS interpolates missing days); the real series still shows them.
+CREATE OR REPLACE VIEW ecommerce.v_dias_compras_incompletas
+OPTIONS (labels = [('capa', 'gold')],
+         description = 'Días con el registro de compras caído en el origen (compras/eventos < 60 % de la mediana).')
+AS
+WITH d AS (SELECT DATE(hora) AS fecha, SUM(compras) / SUM(eventos) AS tasa FROM ecommerce.agg_pedidos_hora GROUP BY 1)
+SELECT fecha, ROUND(tasa / (SELECT APPROX_QUANTILES(tasa, 2)[OFFSET(1)] FROM d), 2) AS tasa_vs_mediana
+FROM d
+WHERE tasa < 0.6 * (SELECT APPROX_QUANTILES(tasa, 2)[OFFSET(1)] FROM d);
+
 -- Daily purchases per category; categories with at least 100 purchases per day on average in 2019
 CREATE OR REPLACE VIEW ecommerce.v_compras_categoria_dia
 OPTIONS (labels = [('capa', 'gold')], description = 'Compras diarias por categoría común (entrada del pronóstico ARIMA_PLUS).')
@@ -30,7 +42,8 @@ DROP MODEL IF EXISTS ecommerce.modelo_demanda_backtest;
 CREATE OR REPLACE MODEL ecommerce.modelo_demanda
 OPTIONS (model_type = 'ARIMA_PLUS', time_series_timestamp_col = 'fecha', time_series_data_col = 'compras',
          time_series_id_col = 'categoria_comun', data_frequency = 'DAILY', horizon = 91)
-AS SELECT fecha, categoria_comun, compras FROM ecommerce.v_compras_categoria_dia WHERE fecha <= fin_entrenamiento;
+AS SELECT fecha, categoria_comun, compras FROM ecommerce.v_compras_categoria_dia
+   WHERE fecha <= fin_entrenamiento AND fecha NOT IN (SELECT fecha FROM ecommerce.v_dias_compras_incompletas);
 
 -- Long table for the dashboard: real purchases (Oct 2019 - Mar 2020) and forecast (Jan-Mar 2020, 90 % interval)
 CREATE OR REPLACE TABLE ecommerce.ml_pronostico_demanda
@@ -52,22 +65,23 @@ SELECT
   CASE WHEN r.fecha <= '2020-01-14' THEN '1-14 ene' WHEN r.fecha <= '2020-02-29' THEN 'ene-feb' ELSE 'marzo' END AS tramo
 FROM ecommerce.ml_pronostico_demanda r
 JOIN ecommerce.ml_pronostico_demanda p USING (fecha, categoria_comun)
-WHERE r.serie = 'real' AND p.serie = 'pronostico';
+WHERE r.serie = 'real' AND p.serie = 'pronostico'
+  AND r.fecha NOT IN (SELECT fecha FROM ecommerce.v_dias_compras_incompletas);
 
 -- 'ene-feb' includes the first 14 days, so each tramo is cumulative except 'marzo'
 CREATE OR REPLACE TABLE ecommerce.ml_eval_demanda
 OPTIONS (labels = [('capa', 'gold')],
          description = 'Error del pronóstico por categoría y tramo frente a las compras reales de 2020 (datos no vistos al entrenar).')
 AS
-SELECT categoria_comun, t.tramo,
+SELECT categoria_comun, t AS tramo,
   ROUND(100 * SUM(ABS(real - pronostico)) / SUM(real), 1) AS error_pct,           -- WAPE
   ROUND(100 * (SUM(pronostico) - SUM(real)) / SUM(real), 1) AS sesgo_pct,
   ROUND(100 * COUNTIF(real BETWEEN limite_inferior AND limite_superior) / COUNT(*), 1) AS dentro_intervalo_pct,
   SUM(real) AS compras_reales, SUM(pronostico) AS compras_pronosticadas
 FROM pares
 JOIN UNNEST(['1-14 ene', 'ene-feb', 'marzo']) AS t
-  ON pares.tramo = t.tramo OR (t.tramo = 'ene-feb' AND pares.tramo = '1-14 ene')
-GROUP BY categoria_comun, t.tramo;
+  ON pares.tramo = t OR (t = 'ene-feb' AND pares.tramo = '1-14 ene')
+GROUP BY categoria_comun, t;
 
 -- One-row summary for the dashboard KPIs (all categories together)
 CREATE OR REPLACE TABLE ecommerce.ml_resumen_pronostico
