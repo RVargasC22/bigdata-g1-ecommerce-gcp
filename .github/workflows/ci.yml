@@ -1,6 +1,4 @@
-# CI: static checks on every push / pull request; plan on main with Workload Identity Federation.
-# The folder is not a git repository yet: `git init` + push to GitHub activates this workflow.
-name: ci
+# CI: static checks on every push / pull request; plan on main with Workload Identity Federation.name: ci
 on:
   push:
   pull_request:
