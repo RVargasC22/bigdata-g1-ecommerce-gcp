@@ -127,6 +127,18 @@ resource "google_pubsub_subscription" "dataflow" {
   }
 }
 
+# Second consumer of the same topic (fan-out): the Beam job (streaming/beam)
+resource "google_pubsub_subscription" "beam" {
+  name                       = var.subscription_beam
+  topic                      = google_pubsub_topic.events.id
+  ack_deadline_seconds       = 60
+  message_retention_duration = "604800s"
+  labels                     = { componente = "pubsub" }
+  expiration_policy {
+    ttl = "2678400s"
+  }
+}
+
 # Kaggle token: only the container; the value is added with `gcloud secrets versions add` (never in state)
 resource "google_secret_manager_secret" "kaggle" {
   secret_id = "kaggle-token"

@@ -46,10 +46,12 @@ project_role "$SA_INGESTA" roles/monitoring.metricWriter
 
 # sa-dataflow: worker role, consume its subscription, write only the ecommerce dataset
 project_role "$SA_DATAFLOW" roles/dataflow.worker
-gcloud pubsub subscriptions add-iam-policy-binding "$SUBSCRIPTION" --project="$PROJECT_ID" \
-  --member="serviceAccount:$SA_DATAFLOW" --role=roles/pubsub.subscriber >/dev/null
-gcloud pubsub subscriptions add-iam-policy-binding "$SUBSCRIPTION" --project="$PROJECT_ID" \
-  --member="serviceAccount:$SA_DATAFLOW" --role=roles/pubsub.viewer >/dev/null
+for sub in "$SUBSCRIPTION" "$SUBSCRIPTION_BEAM"; do   # template job and Beam job (streaming/beam)
+  gcloud pubsub subscriptions add-iam-policy-binding "$sub" --project="$PROJECT_ID" \
+    --member="serviceAccount:$SA_DATAFLOW" --role=roles/pubsub.subscriber >/dev/null
+  gcloud pubsub subscriptions add-iam-policy-binding "$sub" --project="$PROJECT_ID" \
+    --member="serviceAccount:$SA_DATAFLOW" --role=roles/pubsub.viewer >/dev/null
+done
 gcloud storage buckets add-iam-policy-binding "gs://$BUCKET" \
   --member="serviceAccount:$SA_DATAFLOW" --role=roles/storage.objectUser >/dev/null
 dataset_role "$SA_DATAFLOW" roles/bigquery.dataEditor

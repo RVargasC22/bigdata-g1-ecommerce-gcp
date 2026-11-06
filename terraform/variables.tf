@@ -26,6 +26,10 @@ variable "subscription" {
   type    = string
   default = "rees46-events-dataflow"
 }
+variable "subscription_beam" {
+  type    = string
+  default = "rees46-events-beam"
+}
 # Personal accounts: set in terraform.tfvars (not committed; copy terraform.tfvars.example)
 variable "alert_email" {
   type = string

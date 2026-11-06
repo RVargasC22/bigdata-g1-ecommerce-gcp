@@ -22,6 +22,13 @@ jobs:
           shellcheck -S error $(git ls-files '*.sh')
       - name: Python syntax
         run: python3 -m py_compile $(git ls-files '*.py')
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Beam pipeline unit test (DirectRunner)
+        run: |
+          pip install -q "apache-beam==2.66.0" pytest
+          cd streaming/beam && python -m pytest -q -p no:cacheprovider test_pipeline.py
       - name: JSON (alert policies, lifecycle)
         run: for f in $(git ls-files '*.json'); do python3 -m json.tool "$f" >/dev/null; done
       - name: Dataflow UDF (valid event passes, invalid throws)

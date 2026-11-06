@@ -33,6 +33,10 @@ import {
   id = "${local.p}/subscriptions/${var.subscription}"
 }
 import {
+  to = google_pubsub_subscription.beam
+  id = "${local.p}/subscriptions/${var.subscription_beam}"
+}
+import {
   to = google_secret_manager_secret.kaggle
   id = "${local.p}/secrets/kaggle-token"
 }
@@ -59,6 +63,11 @@ import {
   for_each = toset(["roles/pubsub.subscriber", "roles/pubsub.viewer"])
   to       = google_pubsub_subscription_iam_member.dataflow[each.value]
   id       = "${local.p}/subscriptions/${var.subscription} ${each.value} ${local.sa_mail["sa-dataflow"]}"
+}
+import {
+  for_each = toset(["roles/pubsub.subscriber", "roles/pubsub.viewer"])
+  to       = google_pubsub_subscription_iam_member.beam[each.value]
+  id       = "${local.p}/subscriptions/${var.subscription_beam} ${each.value} ${local.sa_mail["sa-dataflow"]}"
 }
 import {
   to = google_secret_manager_secret_iam_member.ingesta_accessor

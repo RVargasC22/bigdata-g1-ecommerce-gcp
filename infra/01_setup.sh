@@ -25,9 +25,12 @@ done
 gcloud pubsub topics describe "$TOPIC" >/dev/null 2>&1 || \
   gcloud pubsub topics create "$TOPIC" --message-retention-duration=7d \
     --labels=componente=pubsub
-gcloud pubsub subscriptions describe "$SUBSCRIPTION" >/dev/null 2>&1 || \
-  gcloud pubsub subscriptions create "$SUBSCRIPTION" --topic="$TOPIC" \
-    --ack-deadline=60 --message-retention-duration=7d --labels=componente=pubsub
+# One subscription per consumer (fan-out): template job -> events_raw, Beam job -> stream_categoria_minuto
+for sub in "$SUBSCRIPTION" "$SUBSCRIPTION_BEAM"; do
+  gcloud pubsub subscriptions describe "$sub" >/dev/null 2>&1 || \
+    gcloud pubsub subscriptions create "$sub" --topic="$TOPIC" \
+      --ack-deadline=60 --message-retention-duration=7d --labels=componente=pubsub
+done
 
 # Budget alerts at 50/90/100 % (billing account currency is PEN)
 if ! gcloud billing budgets list --billing-account="$BILLING_ACCOUNT" --account="$BILLING_ADMIN" \

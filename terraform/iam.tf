@@ -54,6 +54,13 @@ resource "google_pubsub_subscription_iam_member" "dataflow" {
   member       = local.sa["sa-dataflow"]
 }
 
+resource "google_pubsub_subscription_iam_member" "beam" {
+  for_each     = toset(["roles/pubsub.subscriber", "roles/pubsub.viewer"])
+  subscription = google_pubsub_subscription.beam.id
+  role         = each.value
+  member       = local.sa["sa-dataflow"]
+}
+
 resource "google_secret_manager_secret_iam_member" "ingesta_accessor" {
   secret_id = google_secret_manager_secret.kaggle.id
   role      = "roles/secretmanager.secretAccessor"
