@@ -51,7 +51,7 @@ Transversal:
 | Transformación en tiempo real | Pipeline Apache Beam propio en Dataflow (`streaming/beam/`): valida, enriquece cada evento con la categoría del producto y agrega por minuto y categoría en `stream_categoria_minuto`. Replay a 10x de 17/11 10:30–11:00: 227 830 eventos, 379 de 379 combinaciones minuto × categoría idénticas al cálculo batch (eventos, compras e ingresos al centavo); los 3 mensajes inválidos de prueba van a la cola de errores. Con 1 worker y a 10x, cada minuto queda escrito 3–4 min después de cerrar su ventana (p50 189 s). |
 | Deduplicación | Se eliminaron 21 696 eventos repetidos: duplicados del CSV de origen y reentregas de Pub/Sub. |
 | Calidad | El archivo de diciembre trae una taxonomía distinta (76 % de las compras con categoría contradictoria). Se corrigió por producto y quedó un control automático que lo detecta. |
-| Costo | La demostración (carga oct–dic y 3 replays) costó unos US$4,35, aprox. US$0,0018 por cada 1 000 pedidos. Todo el proyecto a la fecha, con desarrollo, la carga de 2020 y el pronóstico, factura 0,65 TiB en consultas (~US$4 a precio de lista, gratis dentro del TiB mensual) más ~US$1,8 de Dataflow y VMs; el entrenamiento de XGBoost (50,8 GB, otra tarifa) está pendiente de confirmar en el reporte de facturación. |
+| Costo | La demostración (carga oct–dic y 3 replays) costó unos US$4,35, aprox. US$0,0018 por cada 1 000 pedidos. Todo el proyecto a la fecha, con desarrollo, la carga de 2020 y el pronóstico, factura 0,75 TiB en consultas (~US$4,7 a precio de lista, gratis dentro del TiB mensual) más ~US$1,8 de Dataflow y VMs; el entrenamiento de XGBoost (50,8 GB, otra tarifa) está pendiente de confirmar en el reporte de facturación. El almacenamiento (103 GB lógicos en BigQuery y 19,6 GB en Cloud Storage) cuesta ~US$2,2 al mes. |
 | Pronóstico | ARIMA_PLUS por categoría, entrenado con 2019 y validado contra ene–abr 2020 reales: error de 36 % en ene–feb contra 20 % de un promedio simple (abril: 39 % contra 21 %). Con tres meses de historia no supera la referencia; el intervalo de 90 % cubre el 93,5 % de los días de ene–feb (94 % en ene–abr). En Olist, con 17 meses de historia, tampoco ganan ARIMA ni TimesFM; XGBoost queda cerca del promedio en jun–jul (32 % contra 31 %) y lo supera en agosto (24 % contra 28 %). Ver `docs/correcciones_documento.md`, sección 6. |
 
 ## Estructura
@@ -107,6 +107,10 @@ sql/run.sh sql/12_row_access.sql          # row access policies en fact_pedidos
 sql/run.sh sql/16_forecast.sql            # pronóstico ARIMA_PLUS por categoría + validación con ene–abr 2020
 sql/run.sh sql/18_forecast_olist.sql      # experimento Olist: ARIMA 17 y 3 meses, XGBoost, TimesFM y promedio
 ```
+
+Desde el 6 nov 2026 las dos consultas programadas están en pausa, porque los datos ya no cambian. Para
+reactivarlas: `bq update --transfer_config --no_auto_scheduling=false <nombre de la configuración>` (los nombres
+salen de `bq ls --transfer_config --transfer_location=us`).
 
 Los scripts de IAM los corre el owner del proyecto. Para agregar ene–abr 2020 a una carga existente:
 `ingest/fetch_2020.sh [meses]`, que usa una VM que se borra sola, y luego `sql/17_load_2020.sql`.

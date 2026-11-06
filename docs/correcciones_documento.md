@@ -14,7 +14,7 @@ Las métricas de la simulación están en `docs/evidencia/` (`metricas_pico.csv`
 
 **Debe decir:** "Limitamos su alcance a octubre, noviembre y diciembre de 2019. Octubre y noviembre se obtienen de
 Kaggle; diciembre, del repositorio público del autor del dataset (data.rees46.com), con el mismo esquema.
-Tras eliminar duplicados quedan 175,8 millones de eventos."
+Tras eliminar duplicados quedan 177,3 millones de eventos."
 
 **Dice:** "La plataforma tolera picos de tráfico como Black Friday y Cyber Monday".
 
@@ -35,11 +35,11 @@ normal); Black Friday y Cyber Monday tienen un volumen similar al de un día nor
 | Día | Eventos del día | Factor (minuto máximo / p50 normal) |
 |---|---|---|
 | Día normal de noviembre | 1,5 a 2 millones | 1,0 (p50 = 1 521 eventos/min) |
-| 15/11/2019 | 6,2 a 6,5 millones | 4,6 (máximo 6 936 eventos/min) |
+| 15/11/2019 | 6,2 millones | 4,6 (máximo 6 936 eventos/min) |
 | 16/11/2019 | 6,5 millones | 4,9 (máximo 7 524 eventos/min) |
-| 17/11/2019 | 6,4 millones | 5,5 (máximo 8 415 eventos/min) |
+| 17/11/2019 | 6,4 millones | 5,5 (máximo 8 400 eventos/min) |
 | 29/11/2019 Black Friday | 1,85 millones | 1,6 (máximo 2 368 eventos/min) |
-| 02/12/2019 Cyber Monday | 1,74 millones | 1,4 (máximo 2 091 eventos/min) |
+| 02/12/2019 Cyber Monday | 1,74 millones | 1,4 (máximo 2 088 eventos/min) |
 
 El 15/11 no registra compras en el dataset (hueco de datos), por eso el día pico simulado es el 17/11."
 
@@ -58,11 +58,11 @@ duplicados por la entrega al-menos-una-vez de Pub/Sub)."
 | Eventos/s publicados (promedio del día) | 10x: 740 ev/s; 60x: 1 209 a 1 288 ev/s; minuto máximo 2 227 ev/s |
 | Workers de Dataflow (máx. 3) | Autoescalado de 1 a 2 workers (2 a 4 vCPU) a los 12 min del primer replay; nunca hizo falta el tercero |
 | System lag máximo y tiempo de recuperación | Máximo 7 s (p50 1 s, p95 5 s). El backlog llegó a 10 066 mensajes durante 1 minuto y bajó a ~1 100 en el minuto siguiente |
-| Bytes escaneados, SELECT * | 21 947 MB |
-| Bytes escaneados, 3 columnas | 6 724 MB |
-| Bytes escaneados, 3 columnas + filtro por event_type (clustering) | 568 MB |
-| Bytes escaneados, 3 columnas + filtro de un día (partición) | 20,9 MB |
-| Bytes escaneados, tabla agregada del tablero | 0,1 MB |
+| Bytes escaneados, SELECT * | 52 668 MB |
+| Bytes escaneados, 3 columnas | 16 707 MB |
+| Bytes escaneados, 3 columnas + filtro por event_type (clustering) | 1 822 MB |
+| Bytes escaneados, 3 columnas + filtro de un día (partición) | 9,6 MB |
+| Bytes escaneados, tabla agregada del tablero | 0,2 MB |
 | Latencia de consulta del tablero (sin caché, tablas agg_*) | 0,17 a 0,25 s, menos de 0,1 MB escaneados |
 
 ---
@@ -95,8 +95,9 @@ BigQuery almacenamiento lógico activo 0,02 USD/GB-mes con los primeros 10 GB gr
 | VM de ingesta temporal | ~0,66 USD (e2-standard-4 por ~4,5 h y disco de 200 GB) |
 | Pub/Sub | ~7 GB, dentro de los 10 GiB gratis |
 | Almacenamiento después de la demo | < 1 USD/mes (45 GB en BigQuery, 7,2 GB en Cloud Storage) |
+| Almacenamiento al 6 nov 2026, con ene–abr 2020 | ~2,2 USD/mes (103 GB lógicos en BigQuery, de ellos 25,5 GB en `events_staging` y 22,2 GB en el snapshot de `ecommerce_dr`; 19,6 GB en Cloud Storage) |
 | Costo por pedido | 4,35 USD / 2 372 739 pedidos = 0,0018 USD por 1 000 pedidos (sin contar la VM temporal; consultas a precio de lista aunque caen en el TiB gratis) |
-| Todo el proyecto a la fecha (desarrollo, carga ene–abr 2020, pronósticos) | 1 029 consultas, 0,65 TiB facturados en consultas (`INFORMATION_SCHEMA.JOBS_BY_PROJECT`, sin contar dos veces los scripts padre): dentro del TiB gratis del mes, ~4 USD a precio de lista. Con Dataflow (~1,05) y las VMs de ingesta (~0,75): ~2 USD, como máximo ~6 USD. Aparte, el `CREATE MODEL` de XGBoost (`sql/18`) facturó 50,8 GB con la tarifa de BigQuery ML; su costo exacto queda por confirmar en el reporte de facturación |
+| Todo el proyecto a la fecha (desarrollo, carga ene–abr 2020, pronósticos) | 1 143 consultas, 0,75 TiB facturados en consultas (`INFORMATION_SCHEMA.JOBS_BY_PROJECT`, sin contar dos veces los scripts padre): dentro del TiB gratis del mes, ~4,7 USD a precio de lista. Con Dataflow (~1,05) y las VMs de ingesta (~0,75): ~2 USD, como máximo ~6,5 USD. Aparte, el `CREATE MODEL` de XGBoost (`sql/18`) facturó 50,8 GB con la tarifa de BigQuery ML; su costo exacto queda por confirmar en el reporte de facturación |
 
 **Nota:** el costo de la VM de ingesta (descarga y reproducción) no estaba en el documento; agregarla como
 componente temporal que se elimina al terminar (`infra/99_teardown.sh`).
@@ -128,8 +129,8 @@ Con esto el RTO real de las tablas es de segundos, muy por debajo del objetivo d
 ## 5. Integración multifuente
 
 **Agregar (calidad de datos medida):**
-- Duplicados: la carga batch eliminó unas 236 000 filas duplicadas o inválidas con `SELECT DISTINCT`.
-- El día 17/11 trae unos 15 000 duplicados que el streaming no elimina (la plantilla no deduplica).
+- Duplicados: la carga batch eliminó 221 166 filas duplicadas o inválidas con `SELECT DISTINCT`.
+- El día 17/11 trae 15 456 filas repetidas en el CSV de origen. La plantilla de Dataflow no deduplica, así que las elimina el refresco diario (sección "Operación según buenas prácticas").
 - Categorías de Olist sin pareja en `dim_categoria`: housewares (5 884 pedidos), cool_stuff (3 632),
   perfumery (3 162) y otras.
 - 56 669 productos de REES46 no tienen `category_code`.
@@ -148,14 +149,15 @@ re-publicarse.
 **Dice (Volumen):** "Unos 25 GB para octubre a diciembre de 2019 ... el dataset completo tiene 285 millones de
 eventos según su ficha de Kaggle".
 
-**Debe decir:** "Unos 22 GB sin comprimir (7,06 GiB comprimidos en Cloud Storage) y 175,8 millones de eventos
-de octubre a diciembre de 2019 tras eliminar duplicados; en BigQuery ocupan unos 45 GB lógicos incluyendo
-tablas derivadas. Olist suma unos 100 000 pedidos (120 MB)."
+**Debe decir:** "Unos 22 GB sin comprimir (7,06 GiB comprimidos en Cloud Storage) y 177,3 millones de eventos
+de octubre a diciembre de 2019 tras eliminar duplicados. Con enero a abril de 2020 son 410,3 millones de eventos,
+16,5 GiB comprimidos en Cloud Storage y 55,2 GB lógicos en `events_raw` (~103 GB en todo BigQuery). Olist suma
+unos 100 000 pedidos (120 MB)."
 
 **Dice (Velocidad):** "Decenas de eventos por segundo en promedio".
 
-**Debe decir:** "Unos 20 eventos por segundo en un día normal y hasta 116 eventos por segundo en el minuto
-más cargado del pico (15/11). La simulación llegó a unos 1 250 eventos por segundo (60x)."
+**Debe decir:** "Unos 20 eventos por segundo en un día normal y hasta 140 eventos por segundo en el minuto
+más cargado del pico (17/11). La simulación llegó a unos 1 250 eventos por segundo (60x)."
 
 **Dice (REES46, eventos en vivo):** "con un factor de aceleración (por ejemplo 10x)".
 

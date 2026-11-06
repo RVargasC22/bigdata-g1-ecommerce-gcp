@@ -17,7 +17,7 @@ pedidos de 2016 a 2018.
 
 | Paso | Código | Resultado medido |
 |---|---|---|
-| Tipado y descarte de filas inválidas en la carga batch (todo llega como STRING a `events_staging`) | `sql/02_load_events.sql`, `sql/17_load_2020.sql` | ~236 000 filas duplicadas o inválidas eliminadas en oct–dic 2019 |
+| Tipado y descarte de filas inválidas en la carga batch (todo llega como STRING a `events_staging`) | `sql/02_load_events.sql`, `sql/17_load_2020.sql` | 221 166 filas duplicadas o inválidas eliminadas en oct–dic 2019 |
 | Validación de cada mensaje en tiempo real: formato de fecha, tipo de evento, `product_id` entero, precio no negativo | `streaming/udf/transform.js` (plantilla) y `parse_event` en `streaming/beam/pipeline.py` | Los inválidos van a `events_deadletter` con su motivo, sin detener el flujo: 3 de 3 mensajes de prueba en cada job |
 | Deduplicación del streaming (Pub/Sub entrega al menos una vez) | `sql/14_incremental.sql` (consulta programada 06:00) | 21 696 filas repetidas eliminadas |
 | Días con el registro de compras caído en el origen | Vista `v_dias_compras_incompletas` en `sql/16_forecast.sql` | Detecta sola 14–15 nov 2019, 1–2 ene y 20–21 abr 2020 |
@@ -190,8 +190,8 @@ erDiagram
 
 - **Tableros.** Looker Studio (7 páginas) lee solo tablas gold de KB. Respuesta de 0,17 a 0,25 s sin caché, y
   ninguna consulta del tablero toca `events_raw`.
-- **Costo de consulta.** La misma pregunta sobre `events_raw` escanea 21 947 MB con `SELECT *` y 20,9 MB
-  filtrando un día de la partición; sobre la tabla agregada escanea 0,1 MB (`sql/09_bytes_scanned.sh`).
+- **Costo de consulta.** La misma pregunta sobre `events_raw` escanea 52 668 MB con `SELECT *` y 9,6 MB
+  filtrando un día de la partición; sobre la tabla agregada escanea 0,2 MB (`sql/09_bytes_scanned.sh`).
 - **Pronóstico.** BigQuery ML (`sql/16`, `sql/18`) se entrena directamente sobre la tabla gold
   `agg_embudo_categoria_dia`.
 
