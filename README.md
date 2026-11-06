@@ -78,7 +78,7 @@ cp terraform/terraform.tfvars.example terraform/terraform.tfvars
 ```
 
 Todos los scripts leen `config.env`. `sql/run.sh` aplica un tope de bytes facturados a cada consulta y completa
-los placeholders `${OWNER_ACCOUNT}`, `${ANALYST_ACCOUNT}`, etc. de `sql/15_acceso_filas.sql`. Por eso los SQL se
+los placeholders `${OWNER_ACCOUNT}`, `${ANALYST_ACCOUNT}`, etc. de `sql/12_row_access.sql`. Por eso los SQL se
 corren siempre con `sql/run.sh`.
 
 ## Ejecución
@@ -86,22 +86,21 @@ corren siempre con `sql/run.sh`.
 Orden para montar todo desde cero:
 
 ```bash
-./infra/01_setup.sh                 # bucket, datasets, Pub/Sub, presupuesto
-./infra/00_iam.sh                   # cuentas de servicio por componente + token de Kaggle en Secret Manager
-./monitoring/setup_alerts.sh        # alertas: system lag, backlog Pub/Sub, scheduled query fallida
-./infra/02_vm.sh                    # VM temporal de ingesta (sa-ingesta; lee el token del secreto)
+./infra/01_setup.sh                       # bucket, datasets, Pub/Sub, presupuesto
+./infra/02_iam.sh                         # cuentas de servicio por componente + token de Kaggle en Secret Manager
+./monitoring/setup_alerts.sh              # alertas: system lag, backlog Pub/Sub, scheduled query fallida
+./infra/03_vm.sh                          # VM temporal de ingesta (sa-ingesta; lee el token del secreto)
 gcloud compute ssh ingest-vm --zone=us-central1-a --tunnel-through-iap -- 'bash ~/app/ingest/download_to_gcs.sh'
-./ingest/bq_load.sh                 # batch: bq load + dedup + Olist + dims + facts + agregados
-python3 infra/06_acceso_fino.py     # policy tags sobre user_id y customer_unique_id
-sql/run.sh sql/15_acceso_filas.sql  # row access policies en fact_pedidos
-./infra/05_gobierno.sh              # Dataplex: linaje + glosario (capas y descripciones: sql/14_gobierno.sql)
-./infra/03_scheduled_query.sh       # 06:00 dedup + refresco incremental (sql/17); 07:00 chequeos ASSERT (sql/18)
-sql/run.sh sql/19_pronostico.sql    # pronóstico ARIMA_PLUS por categoría + validación con ene–mar 2020
+./ingest/bq_load.sh                       # batch: bq load + dedup + Olist + dims + facts + agregados
+python3 infra/04_fine_grained_access.py   # policy tags sobre user_id y customer_unique_id
+sql/run.sh sql/12_row_access.sql          # row access policies en fact_pedidos
+./infra/05_governance.sh                  # Dataplex: linaje + glosario (capas y descripciones: sql/11_governance.sql)
+./infra/06_scheduled_queries.sh           # 06:00 dedup + refresco incremental (sql/14); 07:00 chequeos ASSERT (sql/15)
+sql/run.sh sql/16_forecast.sql            # pronóstico ARIMA_PLUS por categoría + validación con ene–mar 2020
 ```
 
-`00_iam.sh` va después de `01_setup.sh` porque da permisos sobre el bucket, el tópico y la suscripción. Los
-scripts de IAM los corre el owner del proyecto. Para agregar solo ene–mar 2020 a una carga existente:
-`ingest/fetch_2020.sh`, que usa una VM que se borra sola, y luego `sql/20_carga_2020.sql`.
+Los scripts de IAM los corre el owner del proyecto. Para agregar solo ene–mar 2020 a una carga existente:
+`ingest/fetch_2020.sh`, que usa una VM que se borra sola, y luego `sql/17_load_2020.sql`.
 
 ### Streaming: replay del pico
 
@@ -118,9 +117,9 @@ gcloud compute ssh ingest-vm --zone=us-central1-a --tunnel-through-iap -- \
 ### Evidencia
 
 ```bash
-sql/run.sh sql/10_pico.sql sql/13_calidad.sql sql/11_costo_por_pedido.sql
-sql/12_bytes_escaneados.sh
-./drp/snapshot.sh && ./drp/simulacro.sh
+sql/run.sh sql/07_peak.sql sql/10_quality.sql sql/08_cost_per_order.sql
+sql/09_bytes_scanned.sh
+./drp/snapshot.sh && ./drp/recovery_drill.sh
 ```
 
 Los resultados de cada prueba están en `docs/evidencia/` y su lectura en `docs/correcciones_documento.md`.
@@ -130,18 +129,18 @@ Los resultados de cada prueba están en `docs/evidencia/` y su lectura en `docs/
 | Sección del documento | Archivos |
 |---|---|
 | 1. Stack y capas raw / curated / analytics | `infra/01_setup.sh`, `sql/01_ddl.sql`, `sql/05_analytics.sql` |
-| 2. Escalabilidad y pico | `streaming/producer.py`, `streaming/run_replays.sh`, `streaming/launch_dataflow.sh`, `sql/10_pico.sql`, `monitoring/export_metrics.py` |
-| 3. Costos y optimización | `sql/11_costo_por_pedido.sql`, `sql/12_bytes_escaneados.sh`, `infra/lifecycle.json`, presupuesto en `infra/01_setup.sh` |
-| 4. DRP / HA | `drp/snapshot.sh`, `drp/simulacro.sh`, `streaming/stop_dataflow.sh`, `monitoring/alert_*.json` |
-| 5. Integración multifuente | `seed/dim_categoria.csv`, `sql/03_dims.sql`, `sql/04_facts.sql`, `sql/06_fact_inventario.sql`, `sql/13_calidad.sql` |
-| 7. Ingesta y storage | `ingest/download_to_gcs.sh`, `ingest/bq_load.sh`, `streaming/udf/transform.js`, `ingest/fetch_2020.sh`, `sql/20_carga_2020.sql` |
-| Seguridad: IAM y secretos | `infra/00_iam.sh` |
-| Gobierno: capas, glosario, linaje | `infra/05_gobierno.sh`, `sql/14_gobierno.sql` |
-| Acceso fino: columnas y filas | `infra/06_acceso_fino.py`, `sql/15_acceso_filas.sql` |
-| Cola de errores (dead-letter) | `streaming/launch_dataflow.sh` (`events_deadletter`), `streaming/udf/transform.js`, `sql/16_calidad_tablero.sql` |
-| Operación: dedup, refresco incremental, chequeos | `sql/17_incremental.sql`, `sql/18_chequeos.sql`, `infra/03_scheduled_query.sh` |
+| 2. Escalabilidad y pico | `streaming/producer.py`, `streaming/run_replays.sh`, `streaming/launch_dataflow.sh`, `sql/07_peak.sql`, `monitoring/export_metrics.py` |
+| 3. Costos y optimización | `sql/08_cost_per_order.sql`, `sql/09_bytes_scanned.sh`, `infra/lifecycle.json`, presupuesto en `infra/01_setup.sh` |
+| 4. DRP / HA | `drp/snapshot.sh`, `drp/recovery_drill.sh`, `streaming/stop_dataflow.sh`, `monitoring/alert_*.json` |
+| 5. Integración multifuente | `seed/dim_categoria.csv`, `sql/03_dims.sql`, `sql/04_facts.sql`, `sql/06_fact_inventory.sql`, `sql/10_quality.sql` |
+| 7. Ingesta y storage | `ingest/download_to_gcs.sh`, `ingest/bq_load.sh`, `streaming/udf/transform.js`, `ingest/fetch_2020.sh`, `sql/17_load_2020.sql` |
+| Seguridad: IAM y secretos | `infra/02_iam.sh` |
+| Gobierno: capas, glosario, linaje | `infra/05_governance.sh`, `sql/11_governance.sql` |
+| Acceso fino: columnas y filas | `infra/04_fine_grained_access.py`, `sql/12_row_access.sql` |
+| Cola de errores (dead-letter) | `streaming/launch_dataflow.sh` (`events_deadletter`), `streaming/udf/transform.js`, `sql/13_quality_dashboard.sql` |
+| Operación: dedup, refresco incremental, chequeos | `sql/14_incremental.sql`, `sql/15_checks.sql`, `infra/06_scheduled_queries.sh` |
 | Alertas | `monitoring/setup_alerts.sh`, `monitoring/alert_*.json` |
-| Pronóstico de demanda (BigQuery ML) | `sql/19_pronostico.sql` |
+| Pronóstico de demanda (BigQuery ML) | `sql/16_forecast.sql` |
 | Infraestructura como código y CI | `terraform/`, `.github/workflows/ci.yml` |
 
 ## Decisiones de implementación
@@ -150,14 +149,14 @@ Los resultados de cada prueba están en `docs/evidencia/` y su lectura en `docs/
 - **Validación.** La UDF de Dataflow (`transform.js`) rechaza `event_type` desconocidos, fechas mal formadas, precios inválidos e IDs no numéricos. Esos mensajes van a `events_deadletter` sin detener el flujo.
 - **Duplicados.**
   - Batch: pasa por `events_staging` (todo STRING) y se inserta con `SELECT DISTINCT`.
-  - Streaming: Pub/Sub entrega al menos una vez, así que la consulta diaria (`sql/17`) deja una sola copia de cada evento idéntico.
+  - Streaming: Pub/Sub entrega al menos una vez, así que la consulta diaria (`sql/14`) deja una sola copia de cada evento idéntico.
   - Dataflow escribe con la Storage Write API, que permite ese `DELETE` de inmediato.
 - **Refresco incremental.** La consulta diaria procesa solo las particiones modificadas en las últimas 26 h (metadatos gratuitos), con `DELETE` + `INSERT`. El DML conserva descripciones, etiquetas y row access policies.
 - **Taxonomía desde diciembre.**
   - Los archivos del espejo (dic 2019 – mar 2020) numeran `category_id` / `category_code` distinto que Kaggle. Ejemplo: smartphones Samsung como `construction.tools.light`.
   - La categoría se toma por producto desde oct–nov (`dim_producto`) y `fact_eventos` la usa en lugar del código del evento.
   - Los productos nuevos desde diciembre se clasifican con un puente: cada `category_id` nuevo toma la categoría de oct–nov de la mayoría de sus productos compartidos (al menos 5 y 80 % de acuerdo).
-  - `sql/18_chequeos.sql` falla si una categoría salta más de 4x en una semana.
+  - `sql/15_checks.sql` falla si una categoría salta más de 4x en una semana.
 - **Inventario derivado (supuesto).** Stock fijo de 50 unidades por producto cada lunes; cada `purchase` resta una unidad. `quiebre = true` cuando la demanda de la semana alcanza el stock.
 - **Pronóstico.** ARIMA_PLUS con una serie diaria de compras por categoría. Se entrena solo con 2019 y se compara contra ene–mar 2020 reales, que el modelo nunca vio. Marzo incluye el confinamiento por COVID-19 en Rusia.
   - Cada error se compara con una referencia ingenua: el promedio oct–dic 2019 de cada categoría. Con tres meses de historia ARIMA no la supera; se necesita al menos un año.

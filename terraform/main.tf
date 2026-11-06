@@ -3,10 +3,10 @@
 # Not managed here (by design):
 #   - BigQuery tables: created by the SQL layer (sql/*.sql); their schema evolves with the transformations.
 #   - Dataflow job: launched per streaming window (streaming/launch_dataflow.sh) and drained afterwards.
-#   - Ingestion VM: ephemeral (infra/02_vm.sh), deleted after each load.
+#   - Ingestion VM: ephemeral (infra/03_vm.sh), deleted after each load.
 #   - Secret value (Kaggle token): never written to the Terraform state; versions added with gcloud.
-#   - Budget (needs the billing administrator account) and the Dataplex glossary (infra/05_gobierno.sh).
-#   - Removing Editor from the default Compute SA: Terraform members are additive (infra/00_iam.sh does it).
+#   - Budget (needs the billing administrator account) and the Dataplex glossary (infra/05_governance.sh).
+#   - Removing Editor from the default Compute SA: Terraform members are additive (infra/02_iam.sh does it).
 
 terraform {
   required_version = ">= 1.7"

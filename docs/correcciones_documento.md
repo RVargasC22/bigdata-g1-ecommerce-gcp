@@ -1,7 +1,7 @@
 # Correcciones al documento (Examen-grupo-1.pdf) con resultados de la implementación
 
 Cada punto indica la sección, el texto actual y el texto propuesto. Las cifras salen de las consultas del repo
-(`sql/10_pico.sql`, `sql/12_bytes_escaneados.sh`, `sql/13_calidad.sql`, `drp/simulacro.sh`).
+(`sql/07_peak.sql`, `sql/09_bytes_scanned.sh`, `sql/10_quality.sql`, `drp/recovery_drill.sh`).
 Las métricas de la simulación están en `docs/evidencia/` (`metricas_pico.csv`, `replays.log`, `sql_post_replay.txt`).
 
 ---
@@ -170,7 +170,7 @@ Monday".
 
 La primera corrida usó la cuenta de servicio por defecto de Compute Engine (rol Editor del proyecto) y el
 token de Kaggle se copiaba a la VM. Ahora cada componente tiene su propia cuenta con el mínimo privilegio
-(`infra/00_iam.sh`):
+(`infra/02_iam.sh`):
 
 | Cuenta de servicio | Componente | Permisos |
 |---|---|---|
@@ -190,17 +190,17 @@ reconstruyó `fact_inventario`, las tablas `agg_*` y los metadatos sin errores.
 - **Capas y metadatos:** cada tabla lleva la etiqueta `capa` = `bronze` (datos tal como llegan: `events_raw`,
   `events_deadletter`, `olist_*`), `silver` (modelo integrado: `dim_*`, `fact_*`) o `gold` (tablas de los
   tableros: `agg_*`, `mv_eventos_hora`), más la etiqueta `fuente` y descripciones de tablas y columnas clave
-  (`sql/14_gobierno.sql`). Dataplex las cataloga automáticamente y se pueden buscar por `labels.capa=gold`.
+  (`sql/11_governance.sql`). Dataplex las cataloga automáticamente y se pueden buscar por `labels.capa=gold`.
 - **Glosario de negocio:** `glosario-ecommerce` en Dataplex con 10 términos que fijan cómo se calcula cada
   indicador: evento, sesión, pedido, embudo de conversión, tasa de conversión, categoría común, tiempo de
-  entrega, quiebre de stock, factor de pico y dato personal (`infra/05_gobierno.sh`). Las descripciones de las
+  entrega, quiebre de stock, factor de pico y dato personal (`infra/05_governance.sh`). Las descripciones de las
   columnas citan el término del glosario.
 - **Linaje:** con la Data Lineage API activa, cada consulta de BigQuery registra sus tablas de origen y
   destino. Verificado con la API de linaje: `events_raw` + `dim_categoria` -> `dim_producto`,
   `events_raw` -> `fact_inventario`, `events_raw` -> `agg_pedidos_hora` y `fact_eventos` (vista sobre
   `events_raw`) -> `agg_embudo_categoria_dia`. Se ve en BigQuery (pestaña Linaje de cada tabla) y permite seguir un clic crudo
   hasta la métrica de la capa gold.
-- **Calidad:** `sql/13_calidad.sql` (duplicados, categorías sin pareja, eventos por fuente) y la tabla de
+- **Calidad:** `sql/10_quality.sql` (duplicados, categorías sin pareja, eventos por fuente) y la tabla de
   errores del streaming (sección 5).
 
 ### 3. Cola de errores (dead-letter)
@@ -212,14 +212,14 @@ mensajes malformados.
 
 - **Columnas (policy tags):** taxonomía `datos-personales` con dos policy tags, `identificador_usuario`
   sobre `events_raw.user_id` e `identificador_cliente` sobre `olist_customers.customer_unique_id`
-  (`infra/06_acceso_fino.py`). Solo el propietario y el equipo (`Fine-Grained Reader`) pueden leer esas
+  (`infra/04_fine_grained_access.py`). Solo el propietario y el equipo (`Fine-Grained Reader`) pueden leer esas
   columnas; el analista de ejemplo recibe "acceso denegado" si las pide, pero consulta el resto de la tabla.
   El enmascaramiento dinámico (SHA-256 para analistas) usa *data policies*, que exigen que el proyecto
   pertenezca a una organización de Google Cloud; este proyecto se creó con una cuenta personal (la
   organización de UTEC no permite crear proyectos), así que queda como siguiente paso en un entorno con
   organización.
 - **Filas (row access policies):** en `fact_pedidos`, el propietario, el equipo y `sa-transform` ven todas las
-  filas; el analista de ejemplo solo ve la categoría `muebles` (`sql/15_acceso_filas.sql`).
+  filas; el analista de ejemplo solo ve la categoría `muebles` (`sql/12_row_access.sql`).
 
 ### 5. Operación según buenas prácticas
 
@@ -227,20 +227,20 @@ mensajes malformados.
   (`useStorageWriteApi=true`) en lugar de los *streaming inserts* antiguos: las filas recién llegadas
   admiten `UPDATE`/`DELETE` de inmediato (probado: una fila de prueba se borró segundos después de llegar).
   Pub/Sub entrega al menos una vez y el CSV de origen trae filas repetidas, así que el refresco diario
-  (`sql/17_incremental.sql`) deja una sola copia de cada evento idéntico del streaming dentro de una
+  (`sql/14_incremental.sql`) deja una sola copia de cada evento idéntico del streaming dentro de una
   transacción. Resultado: se eliminaron 21 696 filas repetidas (17/11: 15 456; 29/11: 3 606, de ellas 4 por
   reentrega de Pub/Sub; 02/12: 2 634). Filas finales: 6 379 921, 1 850 824 y 1 738 413, igual al conteo de
-  eventos distintos. Después del dedup, los cuatro `ASSERT` de `sql/18_chequeos.sql` pasan y las dos
+  eventos distintos. Después del dedup, los cuatro `ASSERT` de `sql/15_checks.sql` pasan y las dos
   consultas programadas corren como `sa-transform` sin error.
 - **Refresco incremental.** La consulta programada diaria ya no reconstruye todo (`CREATE OR REPLACE` sobre
   ~9 GB de `events_raw`): lee los metadatos de particiones, toma solo los días modificados en las últimas
   26 h y hace `DELETE` + `INSERT` de esos días en `fact_inventario` (semanas completas) y en los agregados.
   Sin datos nuevos escanea casi nada. El DML conserva descripciones, etiquetas y row access policies.
 - **Mínimo privilegio también en la cuenta por defecto.** Se quitó el rol Editor a la cuenta de servicio
-  por defecto de Compute Engine (`infra/00_iam.sh`); nada la usa ya.
+  por defecto de Compute Engine (`infra/02_iam.sh`); nada la usa ya.
 - **Alertas.** Además del system lag: (a) frescura, si un mensaje lleva más de 10 min sin procesarse en la
   suscripción (job caído o atascado); (b) cualquier fallo de una consulta programada, incluida
-  `sql/18_chequeos.sql`, que corre a las 07:00 con `ASSERT`: más de 1 000 rechazos en el dead-letter en 24 h,
+  `sql/15_checks.sql`, que corre a las 07:00 con `ASSERT`: más de 1 000 rechazos en el dead-letter en 24 h,
   agregados que no cuadran con `events_raw`, claves nulas o duplicados del streaming sin limpiar.
 - **Infraestructura como código y CI.** `terraform/` describe los recursos persistentes y los adopta con
   bloques `import` (`terraform plan`: 49 importados, 0 creados, 0 destruidos; solo reaplica etiquetas existentes). Quedan fuera, a propósito: las tablas
@@ -254,7 +254,7 @@ mensajes malformados.
 - **Datos de validación.** Para medir el pronóstico con datos que el modelo nunca vio se cargaron enero,
   febrero y marzo de 2020 del mismo espejo (55,8 M, 54,6 M y 56,2 M eventos; 0,83 M, 1,05 M y 1,02 M
   compras). La descarga corre en una VM efímera que se borra sola a los 30 min (`ingest/fetch_2020.sh`) y la
-  carga en `sql/20_carga_2020.sql`. En total, `events_raw` queda con unos 344 M eventos (oct 2019 – mar 2020).
+  carga en `sql/17_load_2020.sql`. En total, `events_raw` queda con unos 344 M eventos (oct 2019 – mar 2020).
 - **Preparación de la serie.**
   - Taxonomía: los productos que aparecen recién desde diciembre (2,2 % de las compras de diciembre, 16 % en
     marzo) no tienen categoría de oct–nov. `dim_producto` los clasifica con un puente: cada `category_id`
@@ -263,7 +263,7 @@ mensajes malformados.
   - Días incompletos: el 14–15 nov 2019 y el 1–2 ene 2020 el origen dejó de registrar compras mientras la
     navegación seguía. Se detectan solos (compras/eventos < 60 % de la mediana, vista
     `v_dias_compras_incompletas`) y se excluyen del entrenamiento y de la evaluación.
-  - Dos chequeos nuevos en `sql/18_chequeos.sql`: una categoría que se multiplica o divide por más de 4 en una
+  - Dos chequeos nuevos en `sql/15_checks.sql`: una categoría que se multiplica o divide por más de 4 en una
     semana (habría detectado el salto de diciembre) y una proporción de compras sin categoría mayor al 35 %.
 - **Modelo.** ARIMA_PLUS con una serie diaria de compras por categoría (las 8 con al menos 100 compras al día),
   entrenado solo hasta el 31 dic 2019, horizonte de 91 días e intervalo de 90 %. Cada error se compara con una

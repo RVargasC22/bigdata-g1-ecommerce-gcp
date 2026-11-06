@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Scheduled queries, both run as sa-transform. Creates or updates.
-#   06:00 UTC  sql/17_incremental.sql   stream dedup + incremental refresh of fact_inventario and aggregates
-#   07:00 UTC  sql/18_chequeos.sql      data-quality ASSERTs (failure -> monitoring/alert_scheduled_query.json)
-# DML keeps descriptions, labels and row access policies, so 14_gobierno / 15_acceso_filas are not rerun.
+#   06:00 UTC  sql/14_incremental.sql   stream dedup + incremental refresh of fact_inventario and aggregates
+#   07:00 UTC  sql/15_checks.sql        data-quality ASSERTs (failure -> monitoring/alert_scheduled_query.json)
+# DML keeps descriptions, labels and row access policies, so 11_governance / 12_row_access are not rerun.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 source config.env
 
-OLD_NAME="refresco-diario-inventario-agregados"   # previous full rebuild (05 + 06 + 14), renamed below
+OLD_NAME="refresco-diario-inventario-agregados"   # previous full rebuild (05 + 06 + 11), renamed below
 
 configs() {
   bq ls --transfer_config --transfer_location="$BQ_LOCATION" --project_id="$PROJECT_ID" --format=json
@@ -29,5 +29,5 @@ schedule() {  # name schedule sql_file [old_name]
   fi
 }
 
-schedule "refresco-diario-incremental" "every day 06:00" sql/17_incremental.sql "$OLD_NAME"
-schedule "chequeos-calidad-diarios" "every day 07:00" sql/18_chequeos.sql
+schedule "refresco-diario-incremental" "every day 06:00" sql/14_incremental.sql "$OLD_NAME"
+schedule "chequeos-calidad-diarios" "every day 07:00" sql/15_checks.sql

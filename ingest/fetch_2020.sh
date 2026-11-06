@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Extends REES46 with Jan-Mar 2020 (real holdout for the demand forecast, sql/19_pronostico.sql).
+# Extends REES46 with Jan-Mar 2020 (real holdout for the demand forecast, sql/16_forecast.sql).
 # Small self-deleting VM (sa-ingesta, 30 min max) runs ingest/download_2020.sh as startup script.
 set -euo pipefail
 cd "$(dirname "$0")/.."

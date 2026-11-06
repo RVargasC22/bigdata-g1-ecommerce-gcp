@@ -1,9 +1,9 @@
 -- Daily incremental refresh (scheduled query, runs as sa-transform). Replaces the full rebuild of
--- 05_analytics.sql / 06_fact_inventario.sql, which rescanned all of events_raw (~9 GB) every day.
+-- 05_analytics.sql / 06_fact_inventory.sql, which rescanned all of events_raw (~9 GB) every day.
 -- Only the events_raw partitions modified in the last 26 h are processed (partition metadata is free to
 -- read); with no new data the run scans almost nothing. Same logic as 05/06, restricted to those dates.
 -- DML (DELETE + INSERT, TRUNCATE + INSERT) keeps table descriptions, labels and row access policies.
--- Initial / full loads still use 05_analytics.sql and 06_fact_inventario.sql (ingest/bq_load.sh).
+-- Initial / full loads still use 05_analytics.sql and 06_fact_inventory.sql (ingest/bq_load.sh).
 
 DECLARE dias ARRAY<DATE> DEFAULT (
   SELECT IFNULL(ARRAY_AGG(PARSE_DATE('%Y%m%d', partition_id)), [])

@@ -2,7 +2,7 @@
 
 -- Reconciliation per replayed day. publicados / fallos come from the producer log (docs/evidencia/replays.log);
 -- cargados_dataflow and duplicados_origen were measured in events_raw on 2026-11-05, before the stream
--- deduplication step (sql/17_incremental.sql) removed the duplicates.
+-- deduplication step (sql/14_incremental.sql) removed the duplicates.
 --   diferencia        = cargados_dataflow - publicados: 0 = nothing lost; > 0 = Pub/Sub at-least-once redelivery
 --   duplicados_origen = rows repeated inside the source CSV itself (also removed in the batch path)
 --   filas_finales     = rows in events_raw today, after deduplication
@@ -34,7 +34,7 @@ FROM medido m LEFT JOIN hoy h USING (dia);
 -- Dead-letter rejections grouped by cause
 CREATE OR REPLACE TABLE ecommerce.agg_calidad_deadletter
 OPTIONS (labels = [('capa', 'gold')],
-         description = 'Mensajes rechazados por la UDF de Dataflow (dead-letter) agrupados por causa; se refresca a diario (sql/17).')
+         description = 'Mensajes rechazados por la UDF de Dataflow (dead-letter) agrupados por causa; se refresca a diario (sql/14).')
 AS
 SELECT
   CASE

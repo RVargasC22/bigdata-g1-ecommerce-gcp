@@ -1,6 +1,6 @@
 -- Governance metadata: layer label (bronze / silver / gold) and business descriptions on every table and on
 -- the key columns. Dataplex Universal Catalog harvests BigQuery metadata automatically, so these labels and
--- descriptions are searchable there and sit next to the glossary terms (infra/05_gobierno.sh).
+-- descriptions are searchable there and sit next to the glossary terms (infra/05_governance.sh).
 -- CREATE OR REPLACE drops descriptions, so this script runs after every rebuild (bq_load.sh, scheduled query).
 
 -- Bronze: data as received

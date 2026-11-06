@@ -4,7 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 source config.env
-# Fills the ${...} account placeholders (sql/15_acceso_filas.sql) so personal accounts stay out of the repo
+# Fills the ${...} account placeholders (sql/12_row_access.sql) so personal accounts stay out of the repo
 render() {
   sed -e "s|\${OWNER_ACCOUNT}|$OWNER_ACCOUNT|g" -e "s|\${TEAM_FULL_ACCESS}|$TEAM_FULL_ACCESS|g" \
       -e "s|\${ANALYST_ACCOUNT}|$ANALYST_ACCOUNT|g" -e "s|\${SA_TRANSFORM}|$SA_TRANSFORM|g" "$1"

@@ -1,4 +1,4 @@
-# One service account per component, least privilege (same as infra/00_iam.sh)
+# One service account per component, least privilege (same as infra/02_iam.sh)
 locals {
   service_accounts = {
     "sa-ingesta"   = "Ingesta: VM de descarga y productor de replay"
@@ -14,7 +14,7 @@ locals {
     "dataflow-worker"           = { sa = "sa-dataflow", role = "roles/dataflow.worker" }
     "transform-job-user"        = { sa = "sa-transform", role = "roles/bigquery.jobUser" }
   }
-  # Readers of the policy-tagged columns: team + sa-transform (stream dedup in sql/17 compares whole rows)
+  # Readers of the policy-tagged columns: team + sa-transform (stream dedup in sql/14 compares whole rows)
   tag_readers = concat(var.full_readers, [local.sa["sa-transform"]])
   tag_grants = merge([for tag in keys(google_data_catalog_policy_tag.pii) : {
     for m in local.tag_readers : "${tag}|${m}" => { tag = tag, member = m }
@@ -67,7 +67,7 @@ resource "google_bigquery_dataset_iam_member" "editor" {
   member     = local.sa[each.value]
 }
 
-# Column-level security: taxonomy + policy tags (attached to columns by infra/06_acceso_fino.py)
+# Column-level security: taxonomy + policy tags (attached to columns by infra/04_fine_grained_access.py)
 resource "google_data_catalog_taxonomy" "pii" {
   region                 = "us"
   display_name           = "datos-personales"

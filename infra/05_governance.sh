@@ -3,7 +3,7 @@
 #  1. Data Lineage API: from now on every BigQuery job records its source -> target lineage automatically
 #     (events_raw -> fact_eventos -> agg_*; visible in BigQuery > table > Lineage).
 #  2. Business glossary: one definition per KPI and concept used in the dashboards.
-#  3. Layer labels and descriptions on tables and columns: sql/14_gobierno.sql.
+#  3. Layer labels and descriptions on tables and columns: sql/11_governance.sql.
 # Idempotent.
 set -euo pipefail
 cd "$(dirname "$0")/.."

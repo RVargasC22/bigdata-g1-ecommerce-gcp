@@ -7,9 +7,9 @@ Column level: taxonomy "datos-personales" (Data Catalog, location us) with two p
 Only FULL_READERS (Fine-Grained Reader) can select those columns; anyone else gets "access denied" on them
 and must leave them out (the rest of the table stays readable). Dynamic masking (data policies with SHA-256
 or a masking routine) needs the project to belong to a Google Cloud organization; this project has none.
-Row level: sql/15_acceso_filas.sql (row access policies on fact_pedidos).
+Row level: sql/12_row_access.sql (row access policies on fact_pedidos).
 
-Usage: python3 infra/06_acceso_fino.py   (needs Policy Tag Admin + Data Policy Admin, i.e. project owner)
+Usage: python3 infra/04_fine_grained_access.py   (needs Policy Tag Admin + Data Policy Admin, i.e. project owner)
 """
 import json
 import os
@@ -35,7 +35,7 @@ def load_config():
 
 CFG = load_config()
 P, LOC, DS = CFG["PROJECT_ID"], "us", CFG["DATASET"]
-# sa-transform reads user_id because the daily stream deduplication (sql/17) compares whole rows
+# sa-transform reads user_id because the daily stream deduplication (sql/14) compares whole rows
 FULL_READERS = [f"user:{CFG['OWNER_ACCOUNT']}", f"user:{CFG['TEAM_FULL_ACCESS']}",
                 f"serviceAccount:{CFG['SA_TRANSFORM']}"]
 TOKEN = subprocess.run(["gcloud", "auth", "print-access-token"], capture_output=True, text=True,
@@ -103,4 +103,4 @@ for table, column, tag in [("events_raw", "user_id", "identificador_usuario"),
         subprocess.run(["bq", "update", ref, tmp.name], check=True, capture_output=True)
     print("tagged", f"{table}.{column}", "->", tag)
 
-print("Acceso fino OK. Filas: sql/run.sh sql/15_acceso_filas.sql")
+print("Acceso fino OK. Filas: sql/run.sh sql/12_row_access.sql")

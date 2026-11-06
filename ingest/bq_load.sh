@@ -28,5 +28,5 @@ $BQ load --replace --source_format=CSV --skip_leading_rows=1 \
   ecommerce.dim_categoria seed/dim_categoria.csv \
   categoria_comun:STRING,fuente:STRING,categoria_fuente:STRING
 
-sql/run.sh sql/03_dims.sql sql/04_facts.sql sql/15_acceso_filas.sql sql/06_fact_inventario.sql \
-  sql/05_analytics.sql sql/14_gobierno.sql sql/13_calidad.sql
+sql/run.sh sql/03_dims.sql sql/04_facts.sql sql/12_row_access.sql sql/06_fact_inventory.sql \
+  sql/05_analytics.sql sql/11_governance.sql sql/10_quality.sql

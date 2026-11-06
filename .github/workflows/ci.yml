@@ -62,6 +62,6 @@ jobs:
       - uses: google-github-actions/setup-gcloud@v2
       - name: SQL dry run (syntax + bytes scanned)
         run: |
-          for f in sql/17_incremental.sql sql/18_chequeos.sql; do
+          for f in sql/14_incremental.sql sql/15_checks.sql; do
             bq query --use_legacy_sql=false --dry_run < "$f"
           done

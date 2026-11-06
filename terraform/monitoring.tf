@@ -68,7 +68,7 @@ resource "google_monitoring_alert_policy" "scheduled_query" {
     }
   }
   documentation {
-    content   = "Falló refresco-diario-incremental o chequeos-calidad-diarios. Si es un ASSERT de sql/18_chequeos.sql, el mensaje dice cuál: crecimiento del dead-letter, agregados que no cuadran con events_raw o duplicados del streaming sin limpiar. Ver Transferencias en BigQuery."
+    content   = "Falló refresco-diario-incremental o chequeos-calidad-diarios. Si es un ASSERT de sql/15_checks.sql, el mensaje dice cuál: crecimiento del dead-letter, agregados que no cuadran con events_raw o duplicados del streaming sin limpiar. Ver Transferencias en BigQuery."
     mime_type = "text/markdown"
   }
 }

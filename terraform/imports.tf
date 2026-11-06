@@ -78,7 +78,7 @@ import {
   to       = google_data_catalog_policy_tag.pii[each.key]
   id       = each.value
 }
-import { # team readers + sa-transform (granted by infra/06_acceso_fino.py)
+import { # team readers + sa-transform (granted by infra/04_fine_grained_access.py)
   for_each = { for pair in setproduct(keys(local.tag_ids), concat(var.full_readers, [local.sa_mail["sa-transform"]])) : "${pair[0]}|${pair[1]}" => pair }
   to       = google_data_catalog_policy_tag_iam_member.reader[each.key]
   id       = "${local.tag_ids[each.value[0]]} roles/datacatalog.categoryFineGrainedReader ${each.value[1]}"

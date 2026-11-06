@@ -5,7 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 source config.env
 BQ="bq --project_id=$PROJECT_ID --location=$BQ_LOCATION"
-T="$DATASET.simulacro_fact_pedidos"
+T="$DATASET.drill_fact_pedidos"
 
 $BQ cp --force "$DATASET.fact_pedidos" "$T" >/dev/null
 ORIG=$($BQ query --use_legacy_sql=false --format=csv "SELECT COUNT(*) FROM $T" | tail -1)

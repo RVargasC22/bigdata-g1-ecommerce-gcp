@@ -2,7 +2,7 @@
 # Email channel + every alert policy in monitoring/alert_*.json. Idempotent by display name.
 #   alert_system_lag       Dataflow behind (RPO < 5 min at risk)
 #   alert_pubsub_backlog   data freshness: messages waiting > 10 min (job down or stuck)
-#   alert_scheduled_query  daily refresh or data-quality ASSERT failed (sql/17, sql/18), incl. dead-letter growth
+#   alert_scheduled_query  daily refresh or data-quality ASSERT failed (sql/14, sql/15), incl. dead-letter growth
 set -euo pipefail
 cd "$(dirname "$0")/.."
 source config.env
