@@ -19,6 +19,9 @@ flowchart LR
   PS --> DF[Dataflow<br/>UDF de validación<br/>Storage Write API]
   DF --> RAW[(BigQuery<br/>events_raw)]
   DF -->|mensajes inválidos| DLQ[(events_deadletter)]
+  PS -->|2.ª suscripción| BM[Dataflow: pipeline Beam<br/>valida, enriquece con dim_producto,<br/>agrega por minuto y categoría]
+  BM --> GOLD
+  BM -->|mensajes inválidos| DLQ
   RAW --> SIL[silver: dims, fact_eventos,<br/>fact_pedidos, fact_inventario]
   SIL --> GOLD[gold: agg_*, ml_*]
   GOLD --> LS[Looker Studio]
@@ -42,6 +45,7 @@ Transversal:
 |---|---|
 | Pico de tráfico | El pico real es el 15–17 nov 2019 (factor 5,5 el 17/11), no Black Friday (1,6) ni Cyber Monday (1,4). |
 | Streaming | 3 replays (17/11 a 10x; Black Friday y Cyber Monday a 60x): 9 990 850 mensajes publicados y ninguno perdido. Dataflow escala de 1 a 2 workers, con lag máximo de 7 s. |
+| Transformación en tiempo real | Pipeline Apache Beam propio en Dataflow (`streaming/beam/`): valida, enriquece cada evento con la categoría del producto y agrega por minuto y categoría en `stream_categoria_minuto`. Replay a 10x de 17/11 10:30–11:00: 227 830 eventos, 379 de 379 combinaciones minuto × categoría idénticas al cálculo batch (eventos, compras e ingresos al centavo); los 3 mensajes inválidos de prueba van a la cola de errores. Con 1 worker y a 10x, cada minuto queda escrito 3–4 min después de cerrar su ventana (p50 189 s). |
 | Deduplicación | Se eliminaron 21 696 eventos repetidos: duplicados del CSV de origen y reentregas de Pub/Sub. |
 | Calidad | El archivo de diciembre trae una taxonomía distinta (76 % de las compras con categoría contradictoria). Se corrigió por producto y quedó un control automático que lo detecta. |
 | Costo | La demostración (carga oct–dic y 3 replays) costó unos US$4,35, aprox. US$0,0018 por cada 1 000 pedidos. Todo el proyecto a la fecha, con desarrollo, la carga de 2020 y el pronóstico, factura 0,65 TiB en consultas (~US$4 a precio de lista, gratis dentro del TiB mensual) más ~US$1,8 de Dataflow y VMs; el entrenamiento de XGBoost (50,8 GB, otra tarifa) está pendiente de confirmar en el reporte de facturación. |
@@ -52,7 +56,8 @@ Transversal:
 ```
 infra/        setup del proyecto, IAM, VM de ingesta, consultas programadas, gobierno, acceso fino
 ingest/       descarga a GCS (Kaggle + espejo REES46) y carga batch a BigQuery
-streaming/    productor de replay (Pub/Sub), lanzamiento y drenado de Dataflow, UDF de validación
+streaming/    productor de replay (Pub/Sub), lanzamiento y drenado de Dataflow, UDF de validación;
+              beam/: pipeline Apache Beam propio (limpieza, enriquecimiento y agregación en tiempo real)
 sql/          capas raw -> silver -> gold, calidad, gobierno, refresco incremental, pronóstico (BigQuery ML)
 monitoring/   alertas de Cloud Monitoring y export de métricas del pico
 drp/          snapshots y simulacro de recuperación
@@ -64,7 +69,7 @@ docs/         correcciones al documento del examen y evidencia de las pruebas
 ## Requisitos
 
 - `gcloud` y `bq` autenticados como owner del proyecto.
-- Python 3.
+- Python 3. Para el pipeline Beam: Python 3.12 con `apache-beam[gcp]==2.66.0` (ver `streaming/beam/launch.sh`).
 - Terraform ≥ 1.7.
 - Un token de Kaggle en `~/.kaggle/access_token`, solo para crear el secreto la primera vez.
 
@@ -115,6 +120,21 @@ gcloud compute ssh ingest-vm --zone=us-central1-a --tunnel-through-iap -- \
 ./infra/99_teardown.sh              # apaga lo que cobra por hora (VM y Dataflow)
 ```
 
+### Streaming: pipeline Beam (limpieza, enriquecimiento y agregación)
+
+```bash
+sql/run.sh sql/19_stream_aggregates.sql   # tabla gold stream_categoria_minuto + función conciliar_stream
+./streaming/beam/launch.sh                # exporta el lookup producto -> categoría a GCS y lanza el job
+./streaming/beam/test_replay.sh "2019-11-17 10:30:00" "2019-11-17 11:00:00"   # VM: tramo a 10x + 3 mensajes inválidos
+bq query --use_legacy_sql=false "SELECT * FROM ecommerce.conciliar_stream('2019-11-17 10:30:00', '2019-11-17 11:00:00') WHERE NOT coincide"
+./streaming/stop_dataflow.sh
+```
+
+El job lee su propia suscripción (`rees46-events-beam`), así que convive con el job de la plantilla: cada mensaje
+llega a los dos. Las ventanas son por hora de llegada (marca de Pub/Sub) y la clave lleva el minuto del evento,
+por lo que un replay de 2019 también cuadra con el batch. Con ventanas por hora del evento, el watermark descarta
+como tardíos los eventos de 2019. Test local: `cd streaming/beam && python -m pytest test_pipeline.py`, que también corre en CI.
+
 ### Evidencia
 
 ```bash
@@ -134,6 +154,7 @@ Los resultados de cada prueba están en `docs/evidencia/` y su lectura en `docs/
 | 3. Costos y optimización | `sql/08_cost_per_order.sql`, `sql/09_bytes_scanned.sh`, `infra/lifecycle.json`, presupuesto en `infra/01_setup.sh` |
 | 4. DRP / HA | `drp/snapshot.sh`, `drp/recovery_drill.sh`, `streaming/stop_dataflow.sh`, `monitoring/alert_*.json` |
 | 5. Integración multifuente | `seed/dim_categoria.csv`, `sql/03_dims.sql`, `sql/04_facts.sql`, `sql/06_fact_inventory.sql`, `sql/10_quality.sql` |
+| Procesamiento en tiempo real (Beam): limpieza, enriquecimiento, agregación | `streaming/beam/pipeline.py`, `streaming/beam/test_pipeline.py`, `streaming/beam/launch.sh`, `streaming/beam/test_replay.sh`, `sql/19_stream_aggregates.sql` |
 | 7. Ingesta y storage | `ingest/download_to_gcs.sh`, `ingest/bq_load.sh`, `streaming/udf/transform.js`, `ingest/fetch_2020.sh`, `sql/17_load_2020.sql` |
 | Seguridad: IAM y secretos | `infra/02_iam.sh` |
 | Gobierno: capas, glosario, linaje | `infra/05_governance.sh`, `sql/11_governance.sql` |
