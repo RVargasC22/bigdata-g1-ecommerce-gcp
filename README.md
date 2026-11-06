@@ -8,6 +8,9 @@ entregas de otra tienda, tableros en Looker Studio y pronóstico de demanda con 
 - **Datos:**
   - REES46 *multi category store*: eventos de navegación y compra, oct 2019 – abr 2020 (410 M eventos; el dataset público termina en abril). Octubre y noviembre vienen de Kaggle; diciembre a abril, del espejo del autor.
   - Olist: pedidos y entregas en Brasil, 2016–2018.
+- **Entrega P2 (7 nov 2026):** versión congelada en el tag
+  [`p2-entrega`](https://github.com/RVargasC22/bigdata-g1-ecommerce-gcp/tree/p2-entrega); la guía por criterio
+  de la rúbrica está en [`docs/entrega_p2.md`](docs/entrega_p2.md).
 
 ## Arquitectura
 
