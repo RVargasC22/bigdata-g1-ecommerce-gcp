@@ -9,6 +9,9 @@
 -- ARIMA_PLUS picks the ARIMA order per series, models weekly seasonality and, by default, cleans spikes
 -- such as the 15-17 Nov peak so they do not distort the baseline. Input is the gold table
 -- agg_embudo_categoria_dia (KB), so training costs cents.
+-- Every error is compared with a naive reference: the Oct-Dec 2019 daily mean of each category, held flat.
+-- Result: with only three months of history ARIMA does not beat that mean (it carries December's level into
+-- 2020); it needs at least one year to learn the annual seasonality. The 90 % interval is well calibrated.
 
 DECLARE fin_entrenamiento DATE DEFAULT '2019-12-31';
 
@@ -45,27 +48,42 @@ OPTIONS (model_type = 'ARIMA_PLUS', time_series_timestamp_col = 'fecha', time_se
 AS SELECT fecha, categoria_comun, compras FROM ecommerce.v_compras_categoria_dia
    WHERE fecha <= fin_entrenamiento AND fecha NOT IN (SELECT fecha FROM ecommerce.v_dias_compras_incompletas);
 
--- Long table for the dashboard: real purchases (Oct 2019 - Mar 2020) and forecast (Jan-Mar 2020, 90 % interval)
+-- Long table for the dashboard: real purchases (Oct 2019 - Mar 2020), ARIMA forecast (Jan-Mar 2020, 90 %
+-- interval) and the naive reference (Oct-Dec 2019 mean per category)
 CREATE OR REPLACE TABLE ecommerce.ml_pronostico_demanda
 OPTIONS (labels = [('capa', 'gold')],
-         description = 'Compras diarias por categoría: real (oct 2019 - mar 2020) y pronóstico ene-mar 2020 de un modelo entrenado solo con 2019, con intervalo de 90 %.')
+         description = 'Compras diarias por categoría: real (oct 2019 - mar 2020), pronóstico ARIMA ene-mar 2020 de un modelo entrenado solo con 2019 (intervalo de 90 %) y referencia ingenua (promedio oct-dic 2019).')
 AS
+WITH pronostico AS (
+  SELECT DATE(forecast_timestamp) AS fecha, categoria_comun, ROUND(forecast_value) AS compras,
+    ROUND(prediction_interval_lower_bound) AS limite_inferior, ROUND(prediction_interval_upper_bound) AS limite_superior
+  FROM ML.FORECAST(MODEL ecommerce.modelo_demanda, STRUCT(91 AS horizon, 0.9 AS confidence_level))
+),
+promedio AS (
+  SELECT categoria_comun, ROUND(AVG(compras)) AS compras
+  FROM ecommerce.v_compras_categoria_dia
+  WHERE fecha <= fin_entrenamiento AND fecha NOT IN (SELECT fecha FROM ecommerce.v_dias_compras_incompletas)
+  GROUP BY categoria_comun
+)
 SELECT fecha, categoria_comun, 'real' AS serie, compras, CAST(NULL AS FLOAT64) AS limite_inferior,
   CAST(NULL AS FLOAT64) AS limite_superior
 FROM ecommerce.v_compras_categoria_dia
 UNION ALL
-SELECT DATE(forecast_timestamp), categoria_comun, 'pronostico', ROUND(forecast_value),
-  ROUND(prediction_interval_lower_bound), ROUND(prediction_interval_upper_bound)
-FROM ML.FORECAST(MODEL ecommerce.modelo_demanda, STRUCT(91 AS horizon, 0.9 AS confidence_level));
+SELECT fecha, categoria_comun, 'pronostico', compras, limite_inferior, limite_superior FROM pronostico
+UNION ALL
+SELECT p.fecha, categoria_comun, 'referencia', m.compras, NULL, NULL
+FROM pronostico p JOIN promedio m USING (categoria_comun);
 
--- Real vs forecast per category and horizon (tramo)
+-- Real vs forecast vs reference per category and horizon (tramo)
 CREATE TEMP TABLE pares AS
 SELECT
   r.fecha, r.categoria_comun, r.compras AS real, p.compras AS pronostico, p.limite_inferior, p.limite_superior,
+  b.compras AS referencia,
   CASE WHEN r.fecha <= '2020-01-14' THEN '1-14 ene' WHEN r.fecha <= '2020-02-29' THEN 'ene-feb' ELSE 'marzo' END AS tramo
 FROM ecommerce.ml_pronostico_demanda r
 JOIN ecommerce.ml_pronostico_demanda p USING (fecha, categoria_comun)
-WHERE r.serie = 'real' AND p.serie = 'pronostico'
+JOIN ecommerce.ml_pronostico_demanda b USING (fecha, categoria_comun)
+WHERE r.serie = 'real' AND p.serie = 'pronostico' AND b.serie = 'referencia'
   AND r.fecha NOT IN (SELECT fecha FROM ecommerce.v_dias_compras_incompletas);
 
 -- 'ene-feb' includes the first 14 days, so each tramo is cumulative except 'marzo'
@@ -75,6 +93,7 @@ OPTIONS (labels = [('capa', 'gold')],
 AS
 SELECT categoria_comun, t AS tramo,
   ROUND(100 * SUM(ABS(real - pronostico)) / SUM(real), 1) AS error_pct,           -- WAPE
+  ROUND(100 * SUM(ABS(real - referencia)) / SUM(real), 1) AS error_referencia_pct,
   ROUND(100 * (SUM(pronostico) - SUM(real)) / SUM(real), 1) AS sesgo_pct,
   ROUND(100 * COUNTIF(real BETWEEN limite_inferior AND limite_superior) / COUNT(*), 1) AS dentro_intervalo_pct,
   SUM(real) AS compras_reales, SUM(pronostico) AS compras_pronosticadas
@@ -86,12 +105,15 @@ GROUP BY categoria_comun, t;
 -- One-row summary for the dashboard KPIs (all categories together)
 CREATE OR REPLACE TABLE ecommerce.ml_resumen_pronostico
 OPTIONS (labels = [('capa', 'gold')],
-         description = 'Error ponderado (WAPE) del pronóstico por tramo y cobertura del intervalo de 90 %, todas las categorías.')
+         description = 'Error ponderado (WAPE) del pronóstico ARIMA y de la referencia ingenua por tramo, y cobertura del intervalo de 90 %, todas las categorías.')
 AS
 SELECT
   ROUND(100 * SUM(IF(tramo = '1-14 ene', ABS(real - pronostico), 0)) / SUM(IF(tramo = '1-14 ene', real, 0)), 1) AS error_14d_pct,
   ROUND(100 * SUM(IF(tramo != 'marzo', ABS(real - pronostico), 0)) / SUM(IF(tramo != 'marzo', real, 0)), 1) AS error_ene_feb_pct,
   ROUND(100 * COUNTIF(tramo != 'marzo' AND real BETWEEN limite_inferior AND limite_superior)
         / COUNTIF(tramo != 'marzo'), 1) AS dentro_intervalo_ene_feb_pct,
-  ROUND(100 * SUM(IF(tramo = 'marzo', ABS(real - pronostico), 0)) / SUM(IF(tramo = 'marzo', real, 0)), 1) AS error_marzo_pct
+  ROUND(100 * SUM(IF(tramo = 'marzo', ABS(real - pronostico), 0)) / SUM(IF(tramo = 'marzo', real, 0)), 1) AS error_marzo_pct,
+  ROUND(100 * SUM(IF(tramo = '1-14 ene', ABS(real - referencia), 0)) / SUM(IF(tramo = '1-14 ene', real, 0)), 1) AS error_referencia_14d_pct,
+  ROUND(100 * SUM(IF(tramo != 'marzo', ABS(real - referencia), 0)) / SUM(IF(tramo != 'marzo', real, 0)), 1) AS error_referencia_ene_feb_pct,
+  ROUND(100 * SUM(IF(tramo = 'marzo', ABS(real - referencia), 0)) / SUM(IF(tramo = 'marzo', real, 0)), 1) AS error_referencia_marzo_pct
 FROM pares;
