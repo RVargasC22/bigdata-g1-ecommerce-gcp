@@ -1,19 +1,58 @@
-# eCommerce behavior from multi category store — Grupo 1 (Big Data, UTEC Posgrado)
+# Plataforma eCommerce en GCP — REES46 + Olist
 
-Implementación en GCP del documento `Examen-grupo-1.pdf`:
-Cloud Storage → Pub/Sub → Dataflow → BigQuery → Looker Studio, con Cloud Monitoring y alertas de presupuesto.
+**Grupo 1 · Big Data · UTEC Posgrado.** Implementación en Google Cloud del diseño del examen
+(`Examen-grupo-1.pdf`): ingesta batch y streaming de eventos de una tienda online, integración con pedidos y
+entregas de otra tienda, tableros en Looker Studio y pronóstico de demanda con BigQuery ML.
 
-Proyecto: `bigdata-g1-ecommerce-1105` (región `us-central1`, datos en multirregión `US`).
+- **Proyecto GCP:** `bigdata-g1-ecommerce-1105` · región `us-central1` · datos en multirregión `US`.
+- **Datos:**
+  - REES46 *multi category store*: eventos de navegación y compra, oct 2019 – mar 2020. Octubre y noviembre vienen de Kaggle; diciembre a marzo, del espejo del autor.
+  - Olist: pedidos y entregas en Brasil, 2016–2018.
 
-Datos: REES46 *multi category store* (oct 2019 – mar 2020; oct–nov de Kaggle, dic–mar del espejo del autor) y
-Olist (Brasil, 2016–2018).
+## Arquitectura
+
+```mermaid
+flowchart LR
+  K[Kaggle / espejo REES46] -->|VM efímera, sa-ingesta| GCS[(Cloud Storage<br/>raw, versionado)]
+  GCS -->|bq load| RAW
+  GCS -->|replay del pico| PS[Pub/Sub<br/>retención 7 días]
+  PS --> DF[Dataflow<br/>UDF de validación<br/>Storage Write API]
+  DF --> RAW[(BigQuery<br/>events_raw)]
+  DF -->|mensajes inválidos| DLQ[(events_deadletter)]
+  RAW --> SIL[silver: dims, fact_eventos,<br/>fact_pedidos, fact_inventario]
+  SIL --> GOLD[gold: agg_*, ml_*]
+  GOLD --> LS[Looker Studio]
+  SIL --> ML[BigQuery ML<br/>ARIMA_PLUS]
+  ML --> GOLD
+  SQ[Consultas programadas<br/>dedup + incremental + ASSERT] --> SIL
+  MON[Cloud Monitoring<br/>alertas por email] -.-> DF
+  MON -.-> PS
+  MON -.-> SQ
+```
+
+Transversal:
+- **Identidades y secretos:** una cuenta de servicio por componente; el token de Kaggle vive en Secret Manager.
+- **Gobierno:** glosario y linaje en Dataplex; capas `bronze` / `silver` / `gold` con etiquetas.
+- **Acceso fino:** policy tags sobre los identificadores de personas y row access policies.
+- **Infraestructura como código:** Terraform y CI en GitHub Actions.
+
+## Resultados principales
+
+| Tema | Resultado |
+|---|---|
+| Pico de tráfico | El pico real es el 15–17 nov 2019 (factor 5,5 el 17/11), no Black Friday (1,6) ni Cyber Monday (1,4). |
+| Streaming | 3 replays (17/11 a 10x; Black Friday y Cyber Monday a 60x): 9 990 850 mensajes publicados y ninguno perdido. Dataflow escala de 1 a 2 workers, con lag máximo de 7 s. |
+| Deduplicación | Se eliminaron 21 696 eventos repetidos: duplicados del CSV de origen y reentregas de Pub/Sub. |
+| Calidad | El archivo de diciembre trae una taxonomía distinta (76 % de las compras con categoría contradictoria). Se corrigió por producto y quedó un control automático que lo detecta. |
+| Costo | Unos US$4,35 por todo el procesamiento, aprox. US$0,0018 por cada 1 000 pedidos. |
+| Pronóstico | ARIMA_PLUS por categoría, entrenado con 2019 y validado contra ene–mar 2020 reales (ver `docs/correcciones_documento.md`). |
 
 ## Estructura
 
 ```
 infra/        setup del proyecto, IAM, VM de ingesta, consultas programadas, gobierno, acceso fino
 ingest/       descarga a GCS (Kaggle + espejo REES46) y carga batch a BigQuery
-streaming/    productor de replay (Pub/Sub), lanzamiento/drenado de Dataflow, UDF de validación
+streaming/    productor de replay (Pub/Sub), lanzamiento y drenado de Dataflow, UDF de validación
 sql/          capas raw -> silver -> gold, calidad, gobierno, refresco incremental, pronóstico (BigQuery ML)
 monitoring/   alertas de Cloud Monitoring y export de métricas del pico
 drp/          snapshots y simulacro de recuperación
@@ -21,6 +60,13 @@ terraform/    infraestructura como código (adopta los recursos existentes con b
 seed/         mapeo manual de categorías REES46 / Olist -> categoría común
 docs/         correcciones al documento del examen y evidencia de las pruebas
 ```
+
+## Requisitos
+
+- `gcloud` y `bq` autenticados como owner del proyecto.
+- Python 3.
+- Terraform ≥ 1.7.
+- Un token de Kaggle en `~/.kaggle/access_token`, solo para crear el secreto la primera vez.
 
 ## Configuración
 
@@ -31,74 +77,45 @@ cp config.env.example config.env                                   # proyecto, b
 cp terraform/terraform.tfvars.example terraform/terraform.tfvars
 ```
 
-Todos los scripts leen `config.env`. `sql/run.sh` completa los placeholders `${OWNER_ACCOUNT}`,
-`${ANALYST_ACCOUNT}`, etc. de `sql/15_acceso_filas.sql`, así que ese script se corre siempre con `sql/run.sh`.
-El token de Kaggle vive en Secret Manager (`infra/00_iam.sh`), nunca en el repositorio.
-
-## Mapa documento → código
-
-| Sección del documento | Archivos |
-|---|---|
-| 1. Stack y capas raw / curated / analytics | `infra/01_setup.sh`, `sql/01_ddl.sql`, `sql/05_analytics.sql` |
-| 2. Escalabilidad y pico | `streaming/producer.py`, `streaming/launch_dataflow.sh`, `sql/10_pico.sql`, `monitoring/export_metrics.py` |
-| 3. Costos y optimización | `sql/11_costo_por_pedido.sql`, `sql/12_bytes_escaneados.sh`, `infra/lifecycle.json`, presupuesto en `infra/01_setup.sh` |
-| 4. DRP / HA | `drp/snapshot.sh`, `drp/simulacro.sh`, `streaming/stop_dataflow.sh`, `monitoring/alert_system_lag.json` |
-| 5. Integración multifuente | `seed/dim_categoria.csv`, `sql/03_dims.sql`, `sql/04_facts.sql`, `sql/06_fact_inventario.sql`, `sql/13_calidad.sql` |
-| 7. Ingesta y storage | `ingest/download_to_gcs.sh`, `ingest/bq_load.sh`, `streaming/udf/transform.js`; ene–mar 2020: `ingest/fetch_2020.sh` + `sql/20_carga_2020.sql` |
-| Seguridad: IAM y secretos | `infra/00_iam.sh` |
-| Gobierno: capas, glosario, linaje | `infra/05_gobierno.sh`, `sql/14_gobierno.sql` |
-| Acceso fino: columnas y filas | `infra/06_acceso_fino.py`, `sql/15_acceso_filas.sql` |
-| Cola de errores (dead-letter) | `streaming/launch_dataflow.sh` (`events_deadletter`), `streaming/udf/transform.js` |
-| Operación: dedup, refresco incremental, chequeos | `sql/17_incremental.sql`, `sql/18_chequeos.sql`, `infra/03_scheduled_query.sh` |
-| Alertas | `monitoring/setup_alerts.sh`, `monitoring/alert_*.json` |
-| IaC y CI | `terraform/`, `.github/workflows/ci.yml` |
-| Pronóstico de demanda (BigQuery ML) | `sql/19_pronostico.sql` |
+Todos los scripts leen `config.env`. `sql/run.sh` aplica un tope de bytes facturados a cada consulta y completa
+los placeholders `${OWNER_ACCOUNT}`, `${ANALYST_ACCOUNT}`, etc. de `sql/15_acceso_filas.sql`. Por eso los SQL se
+corren siempre con `sql/run.sh`.
 
 ## Ejecución
 
-Requisitos locales: `gcloud`/`bq` autenticados como owner del proyecto y `~/.kaggle/access_token`.
+Orden para montar todo desde cero:
 
 ```bash
 ./infra/01_setup.sh                 # bucket, datasets, Pub/Sub, presupuesto
 ./infra/00_iam.sh                   # cuentas de servicio por componente + token de Kaggle en Secret Manager
-./monitoring/setup_alerts.sh        # alertas por email: system lag, backlog Pub/Sub, scheduled query fallida
+./monitoring/setup_alerts.sh        # alertas: system lag, backlog Pub/Sub, scheduled query fallida
 ./infra/02_vm.sh                    # VM temporal de ingesta (sa-ingesta; lee el token del secreto)
-gcloud compute ssh ingest-vm --zone=us-central1-a -- 'bash ~/app/ingest/download_to_gcs.sh'
-./ingest/bq_load.sh                 # ruta batch: bq load + dedup + Olist + dims + facts + agregados (incluye 2020)
-sql/run.sh sql/19_pronostico.sql    # pronóstico ARIMA_PLUS por categoría + validación con ene–mar 2020
-./infra/03_scheduled_query.sh       # 06:00 dedup + refresco incremental (sql/17); 07:00 chequeos ASSERT (sql/18)
-./infra/05_gobierno.sh              # Dataplex: linaje + glosario; capas y descripciones en sql/14_gobierno.sql
+gcloud compute ssh ingest-vm --zone=us-central1-a --tunnel-through-iap -- 'bash ~/app/ingest/download_to_gcs.sh'
+./ingest/bq_load.sh                 # batch: bq load + dedup + Olist + dims + facts + agregados
 python3 infra/06_acceso_fino.py     # policy tags sobre user_id y customer_unique_id
 sql/run.sh sql/15_acceso_filas.sql  # row access policies en fact_pedidos
+./infra/05_gobierno.sh              # Dataplex: linaje + glosario (capas y descripciones: sql/14_gobierno.sql)
+./infra/03_scheduled_query.sh       # 06:00 dedup + refresco incremental (sql/17); 07:00 chequeos ASSERT (sql/18)
+sql/run.sh sql/19_pronostico.sql    # pronóstico ARIMA_PLUS por categoría + validación con ene–mar 2020
 ```
 
-`00_iam.sh` va después de `01_setup.sh` porque da permisos sobre el bucket, el tópico y la suscripción.
-Los scripts de IAM los corre el owner del proyecto.
+`00_iam.sh` va después de `01_setup.sh` porque da permisos sobre el bucket, el tópico y la suscripción. Los
+scripts de IAM los corre el owner del proyecto. Para agregar solo ene–mar 2020 a una carga existente:
+`ingest/fetch_2020.sh`, que usa una VM que se borra sola, y luego `sql/20_carga_2020.sql`.
 
-Infraestructura como código: `terraform/` describe los mismos recursos persistentes (APIs, bucket, datasets,
-Pub/Sub, cuentas de servicio y permisos, secreto, taxonomía y policy tags, canal y alertas) y los adopta con
-bloques `import`. `terraform plan` sobre el proyecto actual: 49 importados, 0 creados, 0 destruidos; solo reaplica etiquetas existentes
-(`docs/evidencia/terraform_plan.txt`). `.github/workflows/ci.yml` valida Terraform, shell, Python, JSON y la
-UDF en cada push; corre `plan` y un dry run del SQL en `main`. El `apply` queda manual.
-
-```bash
-cd terraform && terraform init && terraform plan   # apply manual, revisado por el equipo
-```
-
-Ruta streaming (simulación de Black Friday a 10x):
+### Streaming: replay del pico
 
 ```bash
 ./streaming/launch_dataflow.sh      # esperar ~3 min a que el job esté Running
-gcloud compute ssh ingest-vm --zone=us-central1-a -- \
-  'source ~/app/config.env && ~/venv/bin/python ~/app/streaming/producer.py ~/data/replay/rees46_2019-11-29.csv \
-     --project $PROJECT_ID --topic $TOPIC --speedup 10'
-# al terminar:
-gcloud compute ssh ingest-vm --zone=us-central1-a -- \
-  'source ~/app/config.env && ~/venv/bin/python ~/app/monitoring/export_metrics.py --project $PROJECT_ID --hours 4' 
+gcloud compute ssh ingest-vm --zone=us-central1-a --tunnel-through-iap -- \
+  'nohup bash ~/app/streaming/run_replays.sh > ~/replays.log 2>&1 &'   # 17/11 a 10x, 29/11 y 02/12 a 60x
+gcloud compute ssh ingest-vm --zone=us-central1-a --tunnel-through-iap -- \
+  'source ~/app/config.env && ~/venv/bin/python ~/app/monitoring/export_metrics.py --project $PROJECT_ID --hours 4'
 ./streaming/stop_dataflow.sh        # drain: termina lo pendiente sin perder mensajes
+./infra/99_teardown.sh              # apaga lo que cobra por hora (VM y Dataflow)
 ```
 
-Evidencia:
+### Evidencia
 
 ```bash
 sql/run.sh sql/10_pico.sql sql/13_calidad.sql sql/11_costo_por_pedido.sql
@@ -106,35 +123,68 @@ sql/12_bytes_escaneados.sh
 ./drp/snapshot.sh && ./drp/simulacro.sh
 ```
 
-Apagar lo que cobra por hora (VM y Dataflow): `./infra/99_teardown.sh`.
+Los resultados de cada prueba están en `docs/evidencia/` y su lectura en `docs/correcciones_documento.md`.
+
+## Mapa documento → código
+
+| Sección del documento | Archivos |
+|---|---|
+| 1. Stack y capas raw / curated / analytics | `infra/01_setup.sh`, `sql/01_ddl.sql`, `sql/05_analytics.sql` |
+| 2. Escalabilidad y pico | `streaming/producer.py`, `streaming/run_replays.sh`, `streaming/launch_dataflow.sh`, `sql/10_pico.sql`, `monitoring/export_metrics.py` |
+| 3. Costos y optimización | `sql/11_costo_por_pedido.sql`, `sql/12_bytes_escaneados.sh`, `infra/lifecycle.json`, presupuesto en `infra/01_setup.sh` |
+| 4. DRP / HA | `drp/snapshot.sh`, `drp/simulacro.sh`, `streaming/stop_dataflow.sh`, `monitoring/alert_*.json` |
+| 5. Integración multifuente | `seed/dim_categoria.csv`, `sql/03_dims.sql`, `sql/04_facts.sql`, `sql/06_fact_inventario.sql`, `sql/13_calidad.sql` |
+| 7. Ingesta y storage | `ingest/download_to_gcs.sh`, `ingest/bq_load.sh`, `streaming/udf/transform.js`, `ingest/fetch_2020.sh`, `sql/20_carga_2020.sql` |
+| Seguridad: IAM y secretos | `infra/00_iam.sh` |
+| Gobierno: capas, glosario, linaje | `infra/05_gobierno.sh`, `sql/14_gobierno.sql` |
+| Acceso fino: columnas y filas | `infra/06_acceso_fino.py`, `sql/15_acceso_filas.sql` |
+| Cola de errores (dead-letter) | `streaming/launch_dataflow.sh` (`events_deadletter`), `streaming/udf/transform.js`, `sql/16_calidad_tablero.sql` |
+| Operación: dedup, refresco incremental, chequeos | `sql/17_incremental.sql`, `sql/18_chequeos.sql`, `infra/03_scheduled_query.sh` |
+| Alertas | `monitoring/setup_alerts.sh`, `monitoring/alert_*.json` |
+| Pronóstico de demanda (BigQuery ML) | `sql/19_pronostico.sql` |
+| Infraestructura como código y CI | `terraform/`, `.github/workflows/ci.yml` |
 
 ## Decisiones de implementación
 
-- **Días en streaming.** 2019-11-29 (y 2019-12-02 si existe el archivo de diciembre) se excluyen de la carga batch y entran solo por Pub/Sub → Dataflow, así no se duplican. `events_raw.source` distingue `batch` / `stream`.
-- **Validación.** El UDF (`transform.js`) rechaza `event_type` desconocidos, fechas mal formadas y precios negativos; esos mensajes van a `events_deadletter`.
-- **Duplicados.** La carga batch pasa por `events_staging` (todo STRING) y se inserta con `SELECT DISTINCT`.
-- **Inventario derivado.** Stock inicial fijo de 50 unidades por producto cada lunes; cada `purchase` resta una unidad; reposición semanal. `quiebre = true` cuando la demanda de la semana alcanza el stock.
+- **Días en streaming.** El 17/11, el 29/11 y el 02/12/2019 se excluyen de la carga batch. Entran solo por Pub/Sub → Dataflow, así no se duplican. `events_raw.source` distingue `batch` y `stream`.
+- **Validación.** La UDF de Dataflow (`transform.js`) rechaza `event_type` desconocidos, fechas mal formadas, precios inválidos e IDs no numéricos. Esos mensajes van a `events_deadletter` sin detener el flujo.
+- **Duplicados.**
+  - Batch: pasa por `events_staging` (todo STRING) y se inserta con `SELECT DISTINCT`.
+  - Streaming: Pub/Sub entrega al menos una vez, así que la consulta diaria (`sql/17`) deja una sola copia de cada evento idéntico.
+  - Dataflow escribe con la Storage Write API, que permite ese `DELETE` de inmediato.
+- **Refresco incremental.** La consulta diaria procesa solo las particiones modificadas en las últimas 26 h (metadatos gratuitos), con `DELETE` + `INSERT`. El DML conserva descripciones, etiquetas y row access policies.
+- **Taxonomía desde diciembre.**
+  - Los archivos del espejo (dic 2019 – mar 2020) numeran `category_id` / `category_code` distinto que Kaggle. Ejemplo: smartphones Samsung como `construction.tools.light`.
+  - La categoría se toma por producto desde oct–nov (`dim_producto`) y `fact_eventos` la usa en lugar del código del evento.
+  - `sql/18_chequeos.sql` falla si una categoría salta más de 4x en una semana.
+- **Inventario derivado (supuesto).** Stock fijo de 50 unidades por producto cada lunes; cada `purchase` resta una unidad. `quiebre = true` cuando la demanda de la semana alcanza el stock.
+- **Pronóstico.** ARIMA_PLUS con una serie diaria de compras por categoría. Se entrena solo con 2019 y se compara contra ene–mar 2020 reales, que el modelo nunca vio. Marzo incluye el confinamiento por COVID-19 en Rusia.
 - **Zonas horarias.** REES46 ya viene en UTC; Olist se convierte de `America/Sao_Paulo` a UTC.
 - **Tableros.** Looker Studio lee solo tablas `agg_*`, `ml_*` y la vista materializada `mv_eventos_hora`, nunca `events_raw`.
-- **Taxonomía desde diciembre.** Los archivos del espejo (dic 2019 – mar 2020) numeran `category_id` / `category_code` distinto que Kaggle: el 76 % de las compras de diciembre trae un código que contradice el del mismo producto en oct–nov (p. ej. smartphones Samsung como `construction.tools.light`). La categoría se toma por producto desde oct–nov (`dim_producto`) y `fact_eventos` la usa en lugar del código del evento. `sql/18_chequeos.sql` falla si una categoría salta más de 4x en una semana.
-- **Pronóstico.** ARIMA_PLUS por categoría, entrenado solo con 2019 y validado contra ene–mar 2020 reales, que el modelo nunca vio (marzo incluye el confinamiento por COVID-19 en Rusia).
+- **Infraestructura como código.**
+  - `terraform/` adopta con bloques `import` los recursos que crearon los scripts. `terraform plan`: 49 importados, 0 creados, 0 destruidos (`docs/evidencia/terraform_plan.txt`). El `apply` queda manual.
+  - Quedan fuera, a propósito: las tablas (las crea la capa SQL), el job de Dataflow y la VM (efímeros), el valor del secreto, el presupuesto y el glosario.
+- **CI.** `.github/workflows/ci.yml` valida en cada push: `terraform fmt` / `validate`, sintaxis de shell (`shellcheck`), Python, JSON, y la UDF con un evento válido y otro inválido. En `main`, una vez configurado Workload Identity Federation, también corre `terraform plan` y un dry run del SQL.
 
-## Looker Studio (manual, ~15 min)
+## Looker Studio
 
-Reporte armado: https://lookerstudio.google.com/reporting/270afb19-8307-4db9-b5a8-4465d24330ee
-(7 páginas: Pedidos e ingresos, Embudo por categoría, Demanda vs stock, Entregas y conversión, Streaming en vivo,
-Calidad y gobierno, Pronóstico de demanda). Las fuentes guardan caché de 12 h: antes de presentar, ⋮ → Actualizar datos.
+Reporte (acceso restringido al equipo):
+https://lookerstudio.google.com/reporting/270afb19-8307-4db9-b5a8-4465d24330ee
 
-Atajo: abrir el enlace de `docs/looker_crear_reporte.url` (Linking API) crea el reporte con `agg_pedidos_hora` ya conectada (sin plantilla la API admite una sola fuente); las otras se agregan con "Agregar datos" (paso 2).
+Tiene 7 páginas:
+1. Pedidos e ingresos
+2. Embudo por categoría
+3. Demanda vs stock
+4. Entregas y conversión
+5. Streaming en vivo
+6. Calidad y gobierno
+7. Pronóstico de demanda
 
-1. lookerstudio.google.com → Crear → Fuente de datos → BigQuery → `bigdata-g1-ecommerce-1105` → `ecommerce`.
-2. Agregar fuentes: `agg_pedidos_hora`, `agg_embudo_categoria_dia`, `agg_entregas_categoria`, `agg_demanda_vs_inventario`, `agg_conversion_vs_cumplimiento`, `mv_eventos_hora`.
-3. Páginas sugeridas:
-   - **Pedidos e ingresos por hora:** serie temporal `hora` vs `pedidos`, `ingresos` (agg_pedidos_hora).
-   - **Embudo:** barras por `categoria_comun` con `sesiones_view`, `sesiones_cart`, `sesiones_purchase`.
-   - **Stock:** serie `fecha` vs `productos_en_quiebre`, `demanda_no_atendida`, con `evento` como dimensión.
-   - **Entregas:** tabla `categoria_comun`, `dias_entrega_prom`, `pct_atrasados` + dispersión `tasa_conversion` vs `dias_entrega_prom`.
-   - **Streaming en vivo:** `mv_eventos_hora` filtrado por `source = stream`, actualización de datos cada 1 min.
+Fuentes: tablas `agg_*` y `ml_*` del dataset `ecommerce`, y `mv_eventos_hora`. Las fuentes guardan caché de
+12 h: antes de presentar, ⋮ → Actualizar datos.
+
+Para recrearlo, abre `docs/looker_crear_reporte.url` (Linking API): crea el reporte con `agg_pedidos_hora` ya
+conectada. Las demás fuentes se agregan con "Agregar datos".
 
 ## Runbook DRP
 
@@ -143,5 +193,6 @@ Atajo: abrir el enlace de `docs/looker_crear_reporte.url` (Linking API) crea el 
 | Worker de Dataflow cae | Automático (Dataflow lo reemplaza). |
 | Job de Dataflow cae | Alerta de system lag o de backlog Pub/Sub → `streaming/launch_dataflow.sh`; Pub/Sub retiene 7 días. |
 | Tabla borrada | `bq cp ecommerce.TABLA@<epoch_ms> ecommerce.TABLA` (time travel 7 días) o `bq cp --restore ecommerce_dr.<snapshot> ecommerce.TABLA`. |
-| Datos erróneos | `bq cp --force ecommerce.TABLA@<epoch_ms> ecommerce.TABLA` (conserva partición y clustering; un `CREATE OR REPLACE ... FOR SYSTEM_TIME AS OF` falla en tablas particionadas), o recargar desde `gs://…/raw` (nunca se modifica). |
+| Datos erróneos | `bq cp --force ecommerce.TABLA@<epoch_ms> ecommerce.TABLA` (conserva partición y clustering), o recargar desde `gs://…/raw`, que nunca se modifica. |
+| Refresco diario o chequeo falla | Alerta por email (scheduled query fallida); el mensaje del `ASSERT` indica qué control falló. |
 | Falla regional | `streaming/stop_dataflow.sh` y `streaming/launch_dataflow.sh us-east1`; bucket y dataset son multirregión. |
