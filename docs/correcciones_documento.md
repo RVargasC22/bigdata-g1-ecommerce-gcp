@@ -96,7 +96,7 @@ BigQuery almacenamiento lógico activo 0,02 USD/GB-mes con los primeros 10 GB gr
 | Pub/Sub | ~7 GB, dentro de los 10 GiB gratis |
 | Almacenamiento después de la demo | < 1 USD/mes (45 GB en BigQuery, 7,2 GB en Cloud Storage) |
 | Costo por pedido | 4,35 USD / 2 372 739 pedidos = 0,0018 USD por 1 000 pedidos (sin contar la VM temporal; consultas a precio de lista aunque caen en el TiB gratis) |
-| Todo el proyecto a la fecha (desarrollo, carga ene–abr 2020, pronósticos) | 1 029 consultas, 0,65 TiB facturados en consultas (`INFORMATION_SCHEMA.JOBS_BY_PROJECT`, sin contar dos veces los scripts padre): dentro del TiB gratis del mes, ~4 USD a precio de lista. Con Dataflow (~1,05) y las VMs de ingesta (~0,75): ~2 USD, como máximo ~6 USD. Aparte, el `CREATE MODEL` de XGBoost (`sql/18`) facturó 50,9 GB con la tarifa de BigQuery ML; su costo exacto queda por confirmar en el reporte de facturación |
+| Todo el proyecto a la fecha (desarrollo, carga ene–abr 2020, pronósticos) | 1 029 consultas, 0,65 TiB facturados en consultas (`INFORMATION_SCHEMA.JOBS_BY_PROJECT`, sin contar dos veces los scripts padre): dentro del TiB gratis del mes, ~4 USD a precio de lista. Con Dataflow (~1,05) y las VMs de ingesta (~0,75): ~2 USD, como máximo ~6 USD. Aparte, el `CREATE MODEL` de XGBoost (`sql/18`) facturó 50,8 GB con la tarifa de BigQuery ML; su costo exacto queda por confirmar en el reporte de facturación |
 
 **Nota:** el costo de la VM de ingesta (descarga y reproducción) no estaba en el documento; agregarla como
 componente temporal que se elimina al terminar (`infra/99_teardown.sh`).
@@ -279,7 +279,8 @@ mensajes malformados.
   | abril (confinamiento COVID-19) | 39,2 % | 21,3 % |
 
   En ene–feb, ARIMA gana en muebles, ropa y automotriz, y pierde en electrónica, cómputo, construcción,
-  electrodomésticos y niños. El intervalo de 90 % contiene el 93,5 % de los días reales: está bien calibrado.
+  electrodomésticos y niños. El intervalo de 90 % contiene el 93,5 % de los días reales de ene–feb
+  (94,2 % en ene–abr, pero solo 77 % en los primeros 14 días): está bien calibrado.
 - **Lectura.** Con tres meses de historia ARIMA no supera al promedio: proyecta hacia 2020 el nivel alto de
   diciembre (sesgo positivo) y no puede aprender la estacionalidad anual (campañas de noviembre, Año Nuevo).
   Hace falta al menos un año de historia. Hasta entonces el promedio es la referencia que cualquier modelo
@@ -305,13 +306,15 @@ mensajes malformados.
     con 3 meses, 206. TimesFM falla igual (100). Ambos pesan mucho la última semana antes del corte, que fue
     anormalmente baja (99–144 pedidos/día del 24 al 31 may 2018, coincide con el paro de camioneros en
     Brasil), y además ARIMA arrastra el crecimiento de 2017.
-  - XGBoost es el único método que iguala al promedio: empata en jun–jul y gana en agosto (24,4 % contra
-    27,6 %). En la serie total, ARIMA con 3 meses es el mejor (19,1 % contra 22,7 % del promedio).
+  - XGBoost es el único método que se acerca al promedio: queda 1,8 puntos peor en 1–14 jun y 1,0 en jun–jul,
+    y lo supera en agosto (24,4 % contra 27,6 %). En la serie total, ARIMA con 3 meses es el mejor (19,1 % contra 22,7 % del promedio).
   - Lectura: el problema no es solo el modelo. Sin dos años de datos ningún método aprende la estacionalidad
     anual, y un corte que cae en una anomalía castiga a los modelos que siguen el nivel reciente. Un modelo de
-    árboles con variables relativas al nivel es la alternativa más robusta, pero apenas iguala a la referencia.
-  - Costo: ARIMA y TimesFM leen MB. XGBoost se entrena fuera del motor de consultas y facturó 50,9 GB con la
-    tarifa de BigQuery ML (unos 18 min); no admite `--dry_run`, por lo que el script no debe reentrenarlo sin
+    árboles con variables relativas al nivel es la alternativa más robusta, pero no supera a la referencia con
+    claridad.
+  - Costo: el ARIMA de REES46 factura 21 MB por entrenamiento; los jobs de ARIMA y TimesFM de Olist no
+    reportan bytes en `INFORMATION_SCHEMA.JOBS`, así que su costo no está medido. XGBoost se entrena fuera del
+    motor de consultas y facturó 50,8 GB (50 755 272 704 bytes) con la tarifa de BigQuery ML (unos 18 min); no admite `--dry_run`, por lo que el script no debe reentrenarlo sin
     necesidad.
 - **Costo.** Entrenar y evaluar lee solo la tabla gold `agg_embudo_categoria_dia` (KB). Con seis meses de
   datos, reconstruir silver y gold desde cero factura unos 67 GB (unos 0,41 USD a precio de lista), por lo que
