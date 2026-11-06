@@ -1,0 +1,159 @@
+== sql/10_pico.sql
+SELECT
+  DATE(event_time) AS dia,
+  COUNT(*) AS eventos,
+  ROUND(COUNT(*) / 1440, 0) AS eventos_por_minuto_promedio,
+  COUNTIF(event_type = 'purchase') AS compras
+FROM ecommerce.events_raw
+WHERE DATE(event_time) BETWEEN '2019-11-01' AND '2019-12-05'
+GROUP BY dia
+ORDER BY dia; -- at [2:1]
++------------+---------+-----------------------------+---------+
+|    dia     | eventos | eventos_por_minuto_promedio | compras |
++------------+---------+-----------------------------+---------+
+| 2019-11-01 | 1444754 |                      1003.0 |   22457 |
+| 2019-11-02 | 1554934 |                      1080.0 |   21863 |
+| 2019-11-03 | 1567040 |                      1088.0 |   22145 |
+| 2019-11-04 | 1792508 |                      1245.0 |   26889 |
+| 2019-11-05 | 1716759 |                      1192.0 |   24872 |
+| 2019-11-06 | 1694224 |                      1177.0 |   25319 |
+| 2019-11-07 | 1796237 |                      1247.0 |   24862 |
+| 2019-11-08 | 1893950 |                      1315.0 |   25714 |
+| 2019-11-09 | 1875586 |                      1302.0 |   22767 |
+| 2019-11-10 | 1938354 |                      1346.0 |   22878 |
+| 2019-11-11 | 2006897 |                      1394.0 |   24930 |
+| 2019-11-12 | 1985382 |                      1379.0 |   22725 |
+| 2019-11-13 | 2016711 |                      1400.0 |   22548 |
+| 2019-11-14 | 3064736 |                      2128.0 |   22124 |
+| 2019-11-15 | 6205340 |                      4309.0 |       0 |
+| 2019-11-16 | 6488924 |                      4506.0 |   68247 |
+| 2019-11-17 | 6395377 |                      4441.0 |  185195 |
+| 2019-11-18 | 2018957 |                      1402.0 |   28537 |
+| 2019-11-19 | 1726197 |                      1199.0 |   24967 |
+| 2019-11-20 | 1697436 |                      1179.0 |   24947 |
+| 2019-11-21 | 1674077 |                      1163.0 |   25266 |
+| 2019-11-22 | 1565866 |                      1087.0 |   24187 |
+| 2019-11-23 | 1559515 |                      1083.0 |   22242 |
+| 2019-11-24 | 1589431 |                      1104.0 |   23163 |
+| 2019-11-25 | 1591037 |                      1105.0 |   24827 |
+| 2019-11-26 | 1652842 |                      1148.0 |   24226 |
+| 2019-11-27 | 1644217 |                      1142.0 |   24443 |
+| 2019-11-28 | 1656197 |                      1150.0 |   24305 |
+| 2019-11-29 | 1854430 |                      1288.0 |   32108 |
+| 2019-11-30 | 1752607 |                      1217.0 |   28178 |
+| 2019-12-01 | 1818544 |                      1263.0 |   28345 |
+| 2019-12-02 | 1741047 |                      1209.0 |   28548 |
+| 2019-12-03 | 1642530 |                      1141.0 |   24357 |
+| 2019-12-04 | 1559826 |                      1083.0 |   24472 |
+| 2019-12-05 | 1636184 |                      1136.0 |   25469 |
++------------+---------+-----------------------------+---------+
+WITH por_minuto AS (
+  SELECT TIMESTAMP_TRUNC(event_time, MINUTE) AS minuto, COUNT(*) AS eventos
+  FROM ecommerce.events_raw
+  WHERE DATE(event_time) BETWEEN '2019-11-01' AND '2019-12-05'
+  GROUP BY minuto
+),
+normal AS (
+  SELECT APPROX_QUANTILES(eventos, 100)[OFFSET(50)] AS p50_normal
+  FROM por_minuto
+  WHERE DATE(minuto) BETWEEN '2019-11-01' AND '2019-11-20'
+)
+SELECT
+  DATE(minuto) AS dia,
+  MAX(eventos) AS max_eventos_minuto,
+  APPROX_QUANTILES(eventos, 100)[OFFSET(50)] AS p50_eventos_minuto,
+  ANY_VALUE(p50_normal) AS p50_minuto_dia_normal,
+  ROUND(MAX(eventos) / ANY_VALUE(p50_normal), 1) AS factor_pico_max,
+  ROUND(APPROX_QUANTILES(eventos, 100)[OFFSET(50)] / ANY_VALUE(p50_normal), 1) AS factor_pico_p50
+FROM por_minuto CROSS JOIN normal
+WHERE DATE(minuto) IN ('2019-11-15', '2019-11-16', '2019-11-17', '2019-11-29', '2019-12-02')
+GROUP BY dia
+ORDER BY dia; -- at [14:1]
++------------+--------------------+--------------------+-----------------------+-----------------+-----------------+
+|    dia     | max_eventos_minuto | p50_eventos_minuto | p50_minuto_dia_normal | factor_pico_max | factor_pico_p50 |
++------------+--------------------+--------------------+-----------------------+-----------------+-----------------+
+| 2019-11-15 |               6936 |               4881 |                  1521 |             4.6 |             3.2 |
+| 2019-11-16 |               7524 |               5492 |                  1521 |             4.9 |             3.6 |
+| 2019-11-17 |               8415 |               5360 |                  1521 |             5.5 |             3.5 |
+| 2019-11-29 |               2368 |               1524 |                  1521 |             1.6 |             1.0 |
+| 2019-12-02 |               2091 |               1549 |                  1521 |             1.4 |             1.0 |
++------------+--------------------+--------------------+-----------------------+-----------------+-----------------+
+== sql/13_calidad.sql
++------------------------------+-----------------+-----------+
+|           chequeo            |     detalle     |   filas   |
++------------------------------+-----------------+-----------+
+| categorias olist sin pareja  | (sin categoria) |      1473 |
+| categorias rees46 sin pareja | NULL            |     56361 |
+| eventos por fuente           | batch           | 167281605 |
+| eventos por fuente           | stream          |   9990854 |
++------------------------------+-----------------+-----------+
+== sql/11_costo_por_pedido.sql
+Error in query string: Error processing job
+'bigdata-g1-ecommerce-1105:bqjob_r41daf94954632db1_000001a1adad1601_1': Access
+Denied: Table bigdata-g1-ecommerce-1105:region-
+us.INFORMATION_SCHEMA.TABLE_STORAGE: User does not have permission to query
+table bigdata-g1-ecommerce-1105:region-us.INFORMATION_SCHEMA.TABLE_STORAGE, or
+perhaps it does not exist. at [8:1]
+== sql/11_costo_por_pedido.sql
+WITH n AS (
+  SELECT COUNT(DISTINCT user_session) AS pedidos
+  FROM ecommerce.events_raw
+  WHERE event_type = 'purchase'
+),
+consultas AS (
+  -- on-demand price ~6.25 USD/TiB (first TiB/month free, ignored here to show the full cost)
+  SELECT
+    SUM(total_bytes_billed) / POW(1024, 4) AS tib_facturados,
+    SUM(total_bytes_billed) / POW(1024, 4) * 6.25 AS usd_consultas
+  FROM `region-us`.INFORMATION_SCHEMA.JOBS
+  WHERE creation_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
+    AND job_type = 'QUERY' AND state = 'DONE'
+),
+almacenamiento AS (
+  -- __TABLES__ instead of INFORMATION_SCHEMA.TABLE_STORAGE (access denied for this account).
+  -- Every table is < 90 days old, so all of it is billed as active storage.
+  SELECT
+    SUM(size_bytes) / POW(1024, 3) AS gb_activos,
+    0 AS gb_largo_plazo,
+    SUM(size_bytes) / POW(1024, 3) * 0.02 AS usd_bq_storage_mes
+  FROM ecommerce.__TABLES__
+)
+SELECT
+  n.pedidos,
+  a.gb_activos, a.gb_largo_plazo, a.usd_bq_storage_mes,
+  c.tib_facturados, c.usd_consultas,
+  c_pubsub_usd AS usd_pubsub, c_dataflow_usd AS usd_dataflow, c_storage_gcs_usd AS usd_gcs,
+  a.usd_bq_storage_mes + c.usd_consultas + c_pubsub_usd + c_dataflow_usd + c_storage_gcs_usd AS usd_total,
+  SAFE_DIVIDE(a.usd_bq_storage_mes + c.usd_consultas + c_pubsub_usd + c_dataflow_usd + c_storage_gcs_usd,
+              n.pedidos) AS usd_por_pedido,
+  SAFE_DIVIDE(a.usd_bq_storage_mes + c.usd_consultas + c_pubsub_usd + c_dataflow_usd + c_storage_gcs_usd,
+              n.pedidos) * 1000 AS usd_por_1000_pedidos
+FROM n, consultas c, almacenamiento a; -- at [9:1]
++---------+------------------+----------------+--------------------+---------------------+--------------------+------------+--------------+---------+-------------------+-----------------------+-----------------------+
+| pedidos |    gb_activos    | gb_largo_plazo | usd_bq_storage_mes |   tib_facturados    |   usd_consultas    | usd_pubsub | usd_dataflow | usd_gcs |     usd_total     |    usd_por_pedido     | usd_por_1000_pedidos  |
++---------+------------------+----------------+--------------------+---------------------+--------------------+------------+--------------+---------+-------------------+-----------------------+-----------------------+
+| 2372739 | 45.7945916345343 |              0 |  0.915891832690686 | 0.35124683380126953 | 2.1952927112579346 |          0 |         1.05 |    0.19 | 4.351184543948621 | 1.8338235026897697E-6 | 0.0018338235026897696 |
++---------+------------------+----------------+--------------------+---------------------+--------------------+------------+--------------+---------+-------------------+-----------------------+-----------------------+
+SELECT
+  (SELECT value FROM UNNEST(labels) WHERE key = 'script') AS script,
+  COUNT(*) AS jobs,
+  ROUND(SUM(total_bytes_billed) / POW(1024, 3), 2) AS gb_facturados
+FROM `region-us`.INFORMATION_SCHEMA.JOBS
+WHERE creation_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
+  AND job_type = 'QUERY'
+GROUP BY script
+ORDER BY gb_facturados DESC; -- at [45:1]
++---------------------+------+---------------+
+|       script        | jobs | gb_facturados |
++---------------------+------+---------------+
+| 05_analytics        |   24 |        221.94 |
+| 02_load_events      |    4 |         58.03 |
+| 03_dims             |    9 |         56.53 |
+| NULL                |  153 |         16.55 |
+| 10_pico             |    6 |          5.45 |
+| 06_fact_inventario  |    2 |           0.9 |
+| 04_facts            |    6 |          0.23 |
+| 13_calidad          |    3 |          0.06 |
+| 01_ddl              |    9 |           0.0 |
+| 11_costo_por_pedido |    4 |           0.0 |
++---------------------+------+---------------+

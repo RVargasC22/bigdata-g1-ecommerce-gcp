@@ -1,0 +1,35 @@
+# Local settings with real accounts and IDs (templates: config.env.example, terraform/terraform.tfvars.example)
+config.env
+terraform/terraform.tfvars
+
+# Credentials, never in the repo (the Kaggle token lives in Secret Manager)
+.kaggle/
+*access_token*
+*.json.key
+*-key.json
+
+# Terraform working files and state (lock file is committed)
+terraform/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Data never goes to git: it lives in gs://<bucket>/raw and BigQuery
+data/
+*.csv.gz
+*.parquet
+replay/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp

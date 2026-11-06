@@ -1,0 +1,7 @@
+  # google_bigquery_dataset.ds["ecommerce"] will be updated in-place
+  # google_bigquery_dataset.ds["ecommerce_dr"] will be updated in-place
+            display_name = "Error en un run de BigQuery Data Transfer"
+  # google_pubsub_subscription.dataflow will be updated in-place
+  # google_pubsub_topic.events will be updated in-place
+  # google_storage_bucket.raw will be updated in-place
+Plan: 49 to import, 0 to add, 5 to change, 0 to destroy.

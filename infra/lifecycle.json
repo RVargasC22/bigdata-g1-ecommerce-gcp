@@ -1,0 +1,12 @@
+{
+  "rule": [
+    {"action": {"type": "SetStorageClass", "storageClass": "NEARLINE"},
+     "condition": {"age": 30, "matchesStorageClass": ["STANDARD"], "matchesPrefix": ["raw/"]}},
+    {"action": {"type": "SetStorageClass", "storageClass": "COLDLINE"},
+     "condition": {"age": 90, "matchesStorageClass": ["NEARLINE"], "matchesPrefix": ["raw/"]}},
+    {"action": {"type": "Delete"},
+     "condition": {"daysSinceNoncurrentTime": 30, "isLive": false}},
+    {"action": {"type": "Delete"},
+     "condition": {"age": 7, "matchesPrefix": ["dataflow/temp/"]}}
+  ]
+}

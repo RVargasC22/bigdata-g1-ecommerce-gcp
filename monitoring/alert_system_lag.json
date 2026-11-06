@@ -1,0 +1,20 @@
+{
+  "displayName": "Dataflow system lag > 5 min",
+  "combiner": "OR",
+  "conditions": [
+    {
+      "displayName": "system_lag > 300 s during 5 min",
+      "conditionThreshold": {
+        "filter": "resource.type = \"dataflow_job\" AND metric.type = \"dataflow.googleapis.com/job/system_lag\"",
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 300,
+        "duration": "300s",
+        "aggregations": [{"alignmentPeriod": "60s", "perSeriesAligner": "ALIGN_MAX"}]
+      }
+    }
+  ],
+  "documentation": {
+    "content": "RPO < 5 min en riesgo. Revisar el job en Dataflow; si cayó: streaming/launch_dataflow.sh (Pub/Sub retiene 7 días).",
+    "mimeType": "text/markdown"
+  }
+}

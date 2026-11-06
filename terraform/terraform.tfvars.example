@@ -1,0 +1,3 @@
+# Copy to terraform.tfvars (git-ignored) and fill in the real accounts
+alert_email  = "alertas@example.com"
+full_readers = ["user:owner@example.com", "user:teammate@example.com"]

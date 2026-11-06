@@ -1,0 +1,68 @@
+# CI: static checks on every push / pull request; plan on main with Workload Identity Federation.
+# The folder is not a git repository yet: `git init` + push to GitHub activates this workflow.
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - name: Terraform fmt + validate
+        working-directory: terraform
+        run: |
+          terraform fmt -check -recursive
+          terraform init -backend=false -input=false
+          terraform validate
+      - name: Shell syntax + shellcheck
+        run: |
+          for f in $(git ls-files '*.sh'); do bash -n "$f"; done
+          shellcheck -S error $(git ls-files '*.sh')
+      - name: Python syntax
+        run: python3 -m py_compile $(git ls-files '*.py')
+      - name: JSON (alert policies, lifecycle)
+        run: for f in $(git ls-files '*.json'); do python3 -m json.tool "$f" >/dev/null; done
+      - name: Dataflow UDF (valid event passes, invalid throws)
+        run: |
+          node -e '
+            eval(require("fs").readFileSync("streaming/udf/transform.js", "utf8"));
+            const ok = JSON.parse(transform(JSON.stringify({event_time: "2019-11-17 10:00:00 UTC",
+              event_type: "view", product_id: "1", price: "1.0", user_id: "1", user_session: "s"})));
+            if (ok.source !== "stream") throw "valid event rejected";
+            let threw = false;
+            try { transform(JSON.stringify({event_time: "x", event_type: "hack"})); } catch (e) { threw = true; }
+            if (!threw) throw "invalid event accepted";'
+
+  # Runs only once Workload Identity Federation is configured (repository variables WIF_PROVIDER, TERRAFORM_SA,
+  # TF_ALERT_EMAIL, TF_FULL_READERS as a JSON list); until then it is skipped instead of failing.
+  plan:
+    if: github.ref == 'refs/heads/main' && vars.WIF_PROVIDER != ''
+    needs: checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.TERRAFORM_SA }}
+      - uses: hashicorp/setup-terraform@v3
+      - name: Terraform plan (apply stays manual)
+        working-directory: terraform
+        env:
+          TF_VAR_alert_email: ${{ vars.TF_ALERT_EMAIL }}
+          TF_VAR_full_readers: ${{ vars.TF_FULL_READERS }}
+        run: |
+          terraform init -input=false
+          terraform plan -input=false
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: SQL dry run (syntax + bytes scanned)
+        run: |
+          for f in sql/17_incremental.sql sql/18_chequeos.sql; do
+            bq query --use_legacy_sql=false --dry_run < "$f"
+          done

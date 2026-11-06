@@ -1,0 +1,15 @@
+Prueba de acceso fino (2026-11-05 ~22:15 UTC)
+
+Propietario (Fine-Grained Reader + row policy acceso_total):
+  SELECT user_id FROM events_raw ... LIMIT 2           -> 552766410, 518575443
+  SELECT COUNT(DISTINCT categoria_comun), COUNT(*) FROM fact_pedidos -> 18 categorías, 99 470 filas
+
+Analista de ejemplo (sin Fine-Grained Reader, row policy analista_muebles):
+  SELECT user_id FROM events_raw ...                   -> Access Denied: User has neither fine-grained reader
+                                                          nor masked get permission to get data protected by
+                                                          policy tag "datos-personales : identificador_usuario"
+  SELECT event_type, COUNT(*) FROM events_raw (17/11)  -> view 5 783 241, cart 426 941, purchase 185 195
+  SELECT categoria_comun, COUNT(*) FROM fact_pedidos   -> muebles 24 260 (solo su categoría)
+
+Consulta programada como sa-transform (sin acceso a user_id): SUCCEEDED, reconstruye fact_inventario,
+agg_* y metadatos sin leer columnas protegidas.

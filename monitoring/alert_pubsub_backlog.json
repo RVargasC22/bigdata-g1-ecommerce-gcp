@@ -1,0 +1,20 @@
+{
+  "displayName": "Datos sin llegar a BigQuery: backlog Pub/Sub > 10 min",
+  "combiner": "OR",
+  "conditions": [
+    {
+      "displayName": "oldest_unacked_message_age > 600 s during 5 min",
+      "conditionThreshold": {
+        "filter": "resource.type = \"pubsub_subscription\" AND resource.labels.subscription_id = \"rees46-events-dataflow\" AND metric.type = \"pubsub.googleapis.com/subscription/oldest_unacked_message_age\"",
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 600,
+        "duration": "300s",
+        "aggregations": [{"alignmentPeriod": "60s", "perSeriesAligner": "ALIGN_MAX"}]
+      }
+    }
+  ],
+  "documentation": {
+    "content": "Frescura de datos: hay eventos en Pub/Sub sin procesar hace más de 10 min (job de Dataflow caído o atascado). Revisar el job; si cayó: streaming/launch_dataflow.sh (Pub/Sub retiene 7 días, no se pierde nada).",
+    "mimeType": "text/markdown"
+  }
+}

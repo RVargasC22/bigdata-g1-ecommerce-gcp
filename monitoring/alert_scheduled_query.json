@@ -1,0 +1,20 @@
+{
+  "displayName": "Scheduled query falló (refresco o chequeos de calidad)",
+  "combiner": "OR",
+  "conditions": [
+    {
+      "displayName": "Error en un run de BigQuery Data Transfer",
+      "conditionMatchedLog": {
+        "filter": "resource.type=\"bigquery_dts_config\" AND severity>=ERROR"
+      }
+    }
+  ],
+  "alertStrategy": {
+    "notificationRateLimit": {"period": "3600s"},
+    "autoClose": "86400s"
+  },
+  "documentation": {
+    "content": "Falló refresco-diario-incremental o chequeos-calidad-diarios. Si es un ASSERT de sql/18_chequeos.sql, el mensaje dice cuál: crecimiento del dead-letter, agregados que no cuadran con events_raw o duplicados del streaming sin limpiar. Ver Transferencias en BigQuery.",
+    "mimeType": "text/markdown"
+  }
+}

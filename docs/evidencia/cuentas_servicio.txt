@@ -1,0 +1,19 @@
+Prueba de cuentas de servicio con mínimo privilegio (2026-11-05 ~22:25-22:35 UTC)
+
+sa-ingesta (VM e2-micro de prueba, se borra sola a los 15 min):
+  cuenta del metadata server      -> sa-ingesta@bigdata-g1-ecommerce-1105.iam.gserviceaccount.com
+  leer secreto kaggle-token        -> OK (38 bytes; el token no se imprime)
+  publicar en rees46-events        -> OK (messageId 23169286621642972)
+  listar el bucket                 -> OK (gs://.../dataflow/, gs://.../raw/)
+  consultar BigQuery               -> Access Denied (no tiene bigquery.jobs.create)
+  crear un tópico                  -> denegado (el tópico x-prueba no existe)
+
+sa-dataflow (job 2026-11-05_14_25_56-15935757161193136314, workers con sa-dataflow):
+  evento válido publicado          -> 1 fila en events_raw (2019-12-31 23:59:59, brand = prueba_sa_dataflow)
+  evento con event_type inválido   -> events_deadletter ("invalid event_type: prueba_invalida")
+  mensaje inválido de sa-ingesta   -> events_deadletter ("invalid event_time: bad")
+  Escribe en events_raw aunque user_id tiene policy tag (escribir no requiere Fine-Grained Reader).
+  Job drenado al terminar.
+
+sa-transform: consulta programada ejecutada dos veces como sa-transform -> SUCCEEDED
+(también después de aplicar los policy tags).
