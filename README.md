@@ -63,7 +63,7 @@ monitoring/   alertas de Cloud Monitoring y export de métricas del pico
 drp/          snapshots y simulacro de recuperación
 terraform/    infraestructura como código (adopta los recursos existentes con bloques import)
 seed/         mapeo manual de categorías REES46 / Olist -> categoría común
-docs/         correcciones al documento del examen y evidencia de las pruebas
+docs/         correcciones al documento del examen, entrega P2 (entrega_p2.md) y evidencia de las pruebas
 ```
 
 ## Requisitos
