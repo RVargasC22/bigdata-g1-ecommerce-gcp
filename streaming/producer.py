@@ -2,6 +2,7 @@
 import argparse
 import csv
 import json
+import threading
 import time
 from datetime import datetime, timezone
 
@@ -29,12 +30,15 @@ def main():
             message_limit=20_000, limit_exceeded_behavior=LimitExceededBehavior.BLOCK)),
     )
     topic = f"projects/{a.project}/topics/{a.topic}"
-    failed = 0
+    failed = confirmed = 0
+    lock = threading.Lock()
 
     def on_done(fut):
-        nonlocal failed
-        if fut.exception():
-            failed += 1
+        nonlocal failed, confirmed
+        with lock:
+            confirmed += 1
+            if fut.exception():
+                failed += 1
 
     t0_event = t0_wall = None
     sent = 0
@@ -63,9 +67,15 @@ def main():
                 break
 
     if publisher:
+        # Wait until Pub/Sub confirms every message before reporting DONE: without this wait a replay VM that
+        # shut down right after the producer lost the tail (last 143 of 165 108 events, streaming/beam test)
         publisher.stop()
+        deadline = time.monotonic() + 120
+        while confirmed < sent and time.monotonic() < deadline:
+            time.sleep(0.2)
     el = time.monotonic() - (t0_wall or time.monotonic())
-    print(f"DONE {sent} events in {el:.0f}s ({sent / max(el, 1e-9):.0f} ev/s), failed={failed}")
+    print(f"DONE {sent} events in {el:.0f}s ({sent / max(el, 1e-9):.0f} ev/s), "
+          f"confirmed={confirmed}, failed={failed}")
 
 
 if __name__ == "__main__":
