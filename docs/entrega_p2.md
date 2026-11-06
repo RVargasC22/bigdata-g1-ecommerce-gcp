@@ -1,9 +1,9 @@
 # Entrega P2: procesamiento, transformación y modelado
 
-**Grupo 1 · Big Data · UTEC Posgrado.** Proyecto GCP `bigdata-g1-ecommerce-1105`. Este documento ubica cada
-criterio de la rúbrica en el código del repositorio y en la evidencia de su ejecución. Todo lo descrito está
-desplegado y fue corrido sobre los datos reales: REES46, 410 M eventos de oct 2019 a abr 2020, y Olist, 99 470
-pedidos de 2016 a 2018.
+**Grupo 1 · Big Data · UTEC Posgrado.** Proyecto GCP `bigdata-g1-ecommerce-1105`. En este documento indicamos,
+para cada criterio de la rúbrica, dónde está el código en el repositorio y dónde está la evidencia de su
+ejecución. Todo lo que se describe aquí está desplegado y se ejecutó sobre los datos reales: REES46, con 410 M
+eventos de octubre de 2019 a abril de 2020, y Olist, con 99 470 pedidos de 2016 a 2018.
 
 | Criterio | Dónde está | Evidencia |
 |---|---|---|
@@ -26,26 +26,26 @@ pedidos de 2016 a 2018.
 ### Enriquecimiento
 
 - **Categoría estable por producto** (`sql/03_dims.sql`). Desde diciembre de 2019 el origen cambió la numeración
-  de `category_id`: el 76 % de las compras de diciembre traía una categoría que contradice la del producto en
-  oct–nov. `dim_producto` fija una categoría por producto. Los productos nuevos la heredan de un puente: cada
-  `category_id` nuevo toma la categoría de la mayoría de sus productos compartidos, con al menos 5 productos y
-  80 % de acuerdo (acuerdo medio medido: 94 %).
-- **Categoría común entre fuentes** (`seed/dim_categoria.csv` → `dim_categoria`). Mapea las categorías de REES46
-  y de Olist a 18 categorías comunes (13 aparecen en REES46); es la clave que permite cruzar las dos tiendas.
-- **En tiempo real** (`streaming/beam/pipeline.py`). Cada evento se enriquece dentro del stream con la
-  categoría común de su producto, usando como side input el mapeo exportado de `dim_producto` (386 299
-  productos).
-- **Tiempo y logística** (`sql/04_facts.sql`). Olist registra la hora de São Paulo y se convierte a UTC. Se
-  calculan días a despacho, días de entrega y atraso contra la fecha estimada, y se toma el medio de pago
-  principal de cada pedido.
-- **Inventario derivado** (`sql/06_fact_inventory.sql`). REES46 no trae stock. Supuesto explícito: cada producto
-  empieza la semana con 50 unidades, cada compra descuenta una y el lunes se repone. De ahí salen los quiebres de
-  stock y la demanda no atendida.
+  de `category_id`, y el 76 % de las compras de diciembre traía una categoría distinta a la que tenía el producto
+  en oct–nov. Por eso `dim_producto` fija una sola categoría por producto. Los productos nuevos la heredan a
+  través de un puente: cada `category_id` nuevo toma la categoría de la mayoría de sus productos compartidos,
+  siempre que sean al menos 5 y haya un 80 % de acuerdo. El acuerdo medio que medimos es de 94 %.
+- **Categoría común entre fuentes** (`seed/dim_categoria.csv`, que se carga en `dim_categoria`). Asigna las
+  categorías de REES46 y de Olist a 18 categorías comunes, de las cuales 13 aparecen en REES46. Esta es la clave
+  que permite cruzar las dos tiendas.
+- **En tiempo real** (`streaming/beam/pipeline.py`). Dentro del stream, cada evento recibe la categoría común de
+  su producto. Para eso el pipeline usa como side input una exportación de `dim_producto` con 386 299 productos.
+- **Tiempo y logística** (`sql/04_facts.sql`). Olist registra la hora de São Paulo, que convertimos a UTC.
+  También calculamos los días hasta el despacho, los días de entrega y el atraso respecto a la fecha estimada, y
+  tomamos el medio de pago principal de cada pedido.
+- **Inventario derivado** (`sql/06_fact_inventory.sql`). REES46 no incluye stock, así que partimos de un supuesto
+  explícito: cada producto empieza la semana con 50 unidades, cada compra descuenta una y el lunes se repone. A
+  partir de eso calculamos los quiebres de stock y la demanda no atendida.
 
 ### Cruce de fuentes heterogéneas
 
-Las fuentes son eventos de clic en CSV y en mensajes JSON (REES46), pedidos relacionales en 9 tablas (Olist) y
-un inventario derivado. Se cruzan en `sql/05_analytics.sql`:
+Las fuentes son de distinto tipo: eventos de clic en CSV y en mensajes JSON (REES46), pedidos relacionales en 9
+tablas (Olist) y un inventario derivado. Los cruces se hacen en `sql/05_analytics.sql`:
 
 | Cruce | Tabla gold | Une por |
 |---|---|---|
@@ -53,8 +53,9 @@ un inventario derivado. Se cruzan en `sql/05_analytics.sql`:
 | Conversión de REES46 vs. cumplimiento de Olist | `agg_conversion_vs_cumplimiento` | Categoría común |
 | Patrón hora × día de semana de ambas tiendas | `agg_patron_horario` | Hora y día de semana |
 
-Límite: Olist (Brasil, 2016–2018) y REES46 (2019–2020) no comparten tienda ni periodo. El cruce es por
-categoría y patrón horario: sirve para demostrar la integración, no para sacar conclusiones de negocio.
+Hay que tener en cuenta que Olist (Brasil, 2016–2018) y REES46 (2019–2020) no corresponden a la misma tienda ni
+al mismo periodo. Por eso el cruce se hace por categoría y por patrón horario, lo que sirve para demostrar la
+integración, pero no para sacar conclusiones de negocio.
 
 ## 2. Procesamiento híbrido
 
@@ -77,9 +78,9 @@ Pub/Sub (rees46-events-beam)
   → stream_categoria_minuto (BigQuery, gold)
 ```
 
-**Prueba de punta a punta.** `streaming/beam/test_replay.sh` reproduce desde una VM, a 10x, el tramo 10:30–11:00
-del 17/11/2019, el día pico real. `ecommerce.conciliar_stream` compara el resultado con el mismo agregado
-calculado en batch sobre `fact_eventos`:
+**Prueba de punta a punta.** `streaming/beam/test_replay.sh` reproduce desde una VM, a 10x, el tramo de 10:30 a
+11:00 del 17/11/2019, que es el día pico real. Luego `ecommerce.conciliar_stream` compara el resultado con el mismo
+agregado calculado por lotes sobre `fact_eventos`:
 
 | Indicador | Stream | Batch |
 |---|---|---|
@@ -88,12 +89,12 @@ calculado en batch sobre `fact_eventos`:
 | Compras | 7 134 | 7 134 |
 | Ingresos | 2 324 635,61 | 2 324 635,61 |
 
-El test unitario (`streaming/beam/test_pipeline.py`, DirectRunner) cubre validación, enriquecimiento, producto
-desconocido y cola de errores, y corre en cada push en GitHub Actions.
+El test unitario (`streaming/beam/test_pipeline.py`, con DirectRunner) prueba la validación, el enriquecimiento,
+el caso de un producto desconocido y la cola de errores. Se ejecuta en cada push en GitHub Actions.
 
-**Replays del pico con la plantilla:** 17/11 a 10x, y Black Friday y Cyber Monday a 60x (unos 1 250 eventos/s).
-Se enviaron 9 990 850 mensajes, sin fallos de publicación, y llegaron todos a `events_raw`. Dataflow escaló de 1
-a 2 workers.
+**Replays del pico con la plantilla.** Reprodujimos el 17/11 a 10x, y Black Friday y Cyber Monday a 60x (unos
+1 250 eventos por segundo). Se enviaron 9 990 850 mensajes sin fallos de publicación y todos llegaron a
+`events_raw`. Durante la prueba, Dataflow pasó de 1 a 2 workers.
 
 ## 3. Modelado para analítica
 
@@ -105,13 +106,14 @@ a 2 workers.
 | silver | `dim_fecha`, `dim_categoria`, `dim_producto`, `fact_eventos`, `fact_pedidos`, `fact_inventario` | Modelo integrado |
 | gold | `agg_*` (8 tablas de KB), `mv_eventos_hora`, `stream_categoria_minuto`, `ml_*` | Listas para su consumo en Looker Studio y en el pronóstico |
 
-Cada tabla lleva las etiquetas `capa` y `fuente` y descripciones por columna (`sql/11_governance.sql`).
-Dataplex las cataloga junto al glosario y al linaje.
+Cada tabla lleva las etiquetas `capa` y `fuente`, además de descripciones por columna (`sql/11_governance.sql`).
+Dataplex las cataloga junto con el glosario y el linaje.
 
 ### Esquema
 
-Es un esquema en constelación: tres tablas de hechos comparten las dimensiones de fecha y de categoría común.
-La categoría está en copo de nieve: el evento llega a ella a través del producto.
+Usamos un esquema en constelación, con tres tablas de hechos que comparten las dimensiones de fecha y de
+categoría común. La categoría queda en copo de nieve, porque el evento se relaciona con ella a través del
+producto.
 
 ```mermaid
 erDiagram
@@ -188,16 +190,17 @@ erDiagram
 
 ### Listo para su consumo
 
-- **Tableros.** Looker Studio (7 páginas) lee solo tablas gold de KB. Respuesta de 0,17 a 0,25 s sin caché, y
-  ninguna consulta del tablero toca `events_raw`.
-- **Costo de consulta.** La misma pregunta sobre `events_raw` escanea 52 668 MB con `SELECT *` y 9,6 MB
-  filtrando un día de la partición; sobre la tabla agregada escanea 0,2 MB (`sql/09_bytes_scanned.sh`).
-- **Pronóstico.** BigQuery ML (`sql/16`, `sql/18`) se entrena directamente sobre la tabla gold
+- **Tableros.** Looker Studio (7 páginas) solo lee tablas gold de pocos KB. Responde entre 0,17 y 0,25 s sin
+  caché, y ninguna consulta del tablero toca `events_raw`.
+- **Costo de consulta.** Sobre `events_raw`, la misma pregunta escanea 52 668 MB con `SELECT *` y 9,6 MB si se
+  filtra un día de la partición. Sobre la tabla agregada escanea 0,2 MB (`sql/09_bytes_scanned.sh`).
+- **Pronóstico.** BigQuery ML (`sql/16` y `sql/18`) se entrena directamente sobre la tabla gold
   `agg_embudo_categoria_dia`.
 
 ## Cómo reproducir
 
-El orden completo está en `README.md`, sección Ejecución. Para lo propio de esta entrega:
+El orden completo de ejecución está en la sección Ejecución del `README.md`. Para lo que corresponde a esta
+entrega:
 
 ```bash
 ./ingest/bq_load.sh                                 # lotes: carga, limpieza, dims, hechos y agregados
@@ -211,10 +214,10 @@ bq query --use_legacy_sql=false \
 
 ## Limitaciones conocidas
 
-- **Latencia del pipeline Beam:** 3–4 min desde el cierre de cada ventana, medida a 10x con 1 worker
-  `n1-standard-2`. No se probó con más workers ni al ritmo real (~20 eventos/s).
-- **Ventanas por hora de llegada.** Las ventanas usan la hora de publicación en Pub/Sub y la clave lleva el minuto
-  del evento. Con eventos en vivo ambos coinciden. Con ventanas por hora del evento, un replay de datos de 2019
-  queda años atrás del watermark de Dataflow y se descarta como tardío.
-- **Inventario derivado:** sale de un supuesto (50 unidades por producto y semana), no de datos reales.
-- **REES46 y Olist** no comparten tienda ni periodo (ver Cruce de fuentes).
+- **Latencia del pipeline Beam.** Cada minuto queda escrito 3 a 4 min después de cerrar su ventana. Lo medimos a
+  10x con 1 worker `n1-standard-2`, y no lo probamos con más workers ni al ritmo real (~20 eventos por segundo).
+- **Ventanas por hora de llegada.** Las ventanas usan la hora de publicación en Pub/Sub, y la clave incluye el
+  minuto del evento. Con eventos en vivo, las dos horas coinciden. Si las ventanas se armaran por hora del evento,
+  un replay de datos de 2019 quedaría años por detrás del watermark de Dataflow y se descartaría como tardío.
+- **Inventario derivado.** Sale de un supuesto (50 unidades por producto y semana) y no de datos reales.
+- **REES46 y Olist** no comparten tienda ni periodo (ver Cruce de fuentes heterogéneas).

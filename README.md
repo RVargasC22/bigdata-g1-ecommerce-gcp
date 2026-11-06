@@ -1,8 +1,9 @@
 # Plataforma eCommerce en GCP — REES46 + Olist
 
-**Grupo 1 · Big Data · UTEC Posgrado.** Implementación en Google Cloud del diseño del examen
-(`Examen-grupo-1.pdf`): ingesta batch y streaming de eventos de una tienda online, integración con pedidos y
-entregas de otra tienda, tableros en Looker Studio y pronóstico de demanda con BigQuery ML.
+**Grupo 1 · Big Data · UTEC Posgrado.** Este repositorio implementa en Google Cloud el diseño del examen
+(`Examen-grupo-1.pdf`). Incluye la ingesta batch y en streaming de los eventos de una tienda online, su
+integración con los pedidos y entregas de otra tienda, tableros en Looker Studio y un pronóstico de demanda con
+BigQuery ML.
 
 - **Proyecto GCP:** `bigdata-g1-ecommerce-1105` · región `us-central1` · datos en multirregión `US`.
 - **Datos:**
@@ -37,8 +38,8 @@ flowchart LR
 ```
 
 Transversal:
-- **Identidades y secretos:** una cuenta de servicio por componente; el token de Kaggle vive en Secret Manager.
-- **Gobierno:** glosario y linaje en Dataplex; capas `bronze` / `silver` / `gold` con etiquetas.
+- **Identidades y secretos:** cada componente tiene su propia cuenta de servicio, y el token de Kaggle se guarda en Secret Manager.
+- **Gobierno:** glosario y linaje en Dataplex, y capas `bronze`, `silver` y `gold` identificadas con etiquetas.
 - **Acceso fino:** policy tags sobre los identificadores de personas y row access policies.
 - **Infraestructura como código:** Terraform y CI en GitHub Actions.
 
@@ -85,9 +86,9 @@ cp config.env.example config.env                                   # proyecto, b
 cp terraform/terraform.tfvars.example terraform/terraform.tfvars
 ```
 
-Todos los scripts leen `config.env`. `sql/run.sh` aplica un tope de bytes facturados a cada consulta y completa
-los placeholders `${OWNER_ACCOUNT}`, `${ANALYST_ACCOUNT}`, etc. de `sql/12_row_access.sql`. Por eso los SQL se
-corren siempre con `sql/run.sh`.
+Todos los scripts leen `config.env`. `sql/run.sh` aplica un tope de bytes facturados a cada consulta y reemplaza
+los placeholders de `sql/12_row_access.sql` (`${OWNER_ACCOUNT}`, `${ANALYST_ACCOUNT}` y otros), así que los SQL
+siempre se ejecutan con `sql/run.sh`.
 
 ## Ejecución
 
@@ -112,8 +113,8 @@ Desde el 6 nov 2026 las dos consultas programadas están en pausa, porque los da
 reactivarlas: `bq update --transfer_config --no_auto_scheduling=false <nombre de la configuración>` (los nombres
 salen de `bq ls --transfer_config --transfer_location=us`).
 
-Los scripts de IAM los corre el owner del proyecto. Para agregar ene–abr 2020 a una carga existente:
-`ingest/fetch_2020.sh [meses]`, que usa una VM que se borra sola, y luego `sql/17_load_2020.sql`.
+Los scripts de IAM los ejecuta el owner del proyecto. Para agregar ene–abr 2020 a una carga existente se usa
+`ingest/fetch_2020.sh [meses]`, que trabaja con una VM que se borra sola, y después `sql/17_load_2020.sql`.
 
 ### Streaming: replay del pico
 
@@ -137,10 +138,11 @@ bq query --use_legacy_sql=false "SELECT * FROM ecommerce.conciliar_stream('2019-
 ./streaming/stop_dataflow.sh
 ```
 
-El job lee su propia suscripción (`rees46-events-beam`), así que convive con el job de la plantilla: cada mensaje
-llega a los dos. Las ventanas son por hora de llegada (marca de Pub/Sub) y la clave lleva el minuto del evento,
-por lo que un replay de 2019 también cuadra con el batch. Con ventanas por hora del evento, el watermark descarta
-como tardíos los eventos de 2019. Test local: `cd streaming/beam && python -m pytest test_pipeline.py`, que también corre en CI.
+El job lee de su propia suscripción (`rees46-events-beam`), por lo que funciona en paralelo con el job de la
+plantilla y los dos reciben cada mensaje. Las ventanas se arman por hora de llegada (la marca de Pub/Sub) y la
+clave incluye el minuto del evento, así que un replay de 2019 también cuadra con el batch. Si las ventanas fueran
+por hora del evento, el watermark descartaría como tardíos los eventos de 2019. El test local se corre con
+`cd streaming/beam && python -m pytest test_pipeline.py`, y también se ejecuta en CI.
 
 ### Evidencia
 
@@ -150,7 +152,7 @@ sql/09_bytes_scanned.sh
 ./drp/snapshot.sh && ./drp/recovery_drill.sh
 ```
 
-Los resultados de cada prueba están en `docs/evidencia/` y su lectura en `docs/correcciones_documento.md`.
+Los resultados de cada prueba están en `docs/evidencia/`, y su interpretación, en `docs/correcciones_documento.md`.
 
 ## Mapa documento → código
 
@@ -174,29 +176,29 @@ Los resultados de cada prueba están en `docs/evidencia/` y su lectura en `docs/
 
 ## Decisiones de implementación
 
-- **Días en streaming.** El 17/11, el 29/11 y el 02/12/2019 se excluyen de la carga batch. Entran solo por Pub/Sub → Dataflow, así no se duplican. `events_raw.source` distingue `batch` y `stream`.
-- **Validación.** La UDF de Dataflow (`transform.js`) rechaza `event_type` desconocidos, fechas mal formadas, precios inválidos e IDs no numéricos. Esos mensajes van a `events_deadletter` sin detener el flujo.
+- **Días en streaming.** El 17/11, el 29/11 y el 02/12/2019 no se cargan por lotes. Entran solo por Pub/Sub y Dataflow, para que no se dupliquen, y la columna `events_raw.source` distingue entre `batch` y `stream`.
+- **Validación.** La UDF de Dataflow (`transform.js`) rechaza los `event_type` desconocidos, las fechas mal formadas, los precios inválidos y los IDs no numéricos. Esos mensajes van a `events_deadletter` sin detener el flujo.
 - **Duplicados.**
-  - Batch: pasa por `events_staging` (todo STRING) y se inserta con `SELECT DISTINCT`.
-  - Streaming: Pub/Sub entrega al menos una vez, así que la consulta diaria (`sql/14`) deja una sola copia de cada evento idéntico.
-  - Dataflow escribe con la Storage Write API, que permite ese `DELETE` de inmediato.
-- **Refresco incremental.** La consulta diaria procesa solo las particiones modificadas en las últimas 26 h (metadatos gratuitos), con `DELETE` + `INSERT`. El DML conserva descripciones, etiquetas y row access policies.
+  - En batch, los datos pasan por `events_staging` (todo como STRING) y se insertan con `SELECT DISTINCT`.
+  - En streaming, Pub/Sub entrega cada mensaje al menos una vez, así que la consulta diaria (`sql/14`) deja una sola copia de cada evento idéntico.
+  - Dataflow escribe con la Storage Write API, que permite hacer ese `DELETE` de inmediato.
+- **Refresco incremental.** La consulta diaria solo procesa las particiones modificadas en las últimas 26 h, que identifica con los metadatos de particiones (gratuitos), y lo hace con `DELETE` e `INSERT`. Al usar DML se conservan las descripciones, las etiquetas y las row access policies.
 - **Taxonomía desde diciembre.**
-  - Los archivos del espejo (dic 2019 – abr 2020) numeran `category_id` / `category_code` distinto que Kaggle. Ejemplo: smartphones Samsung como `construction.tools.light`.
-  - La categoría se toma por producto desde oct–nov (`dim_producto`) y `fact_eventos` la usa en lugar del código del evento.
-  - Los productos nuevos desde diciembre se clasifican con un puente: cada `category_id` nuevo toma la categoría de oct–nov de la mayoría de sus productos compartidos (al menos 5 y 80 % de acuerdo).
+  - Los archivos del espejo (dic 2019 – abr 2020) numeran `category_id` y `category_code` de forma distinta que Kaggle. Por ejemplo, los smartphones Samsung aparecen como `construction.tools.light`.
+  - Por eso la categoría se toma por producto a partir de oct–nov (`dim_producto`), y `fact_eventos` usa esa categoría en lugar del código que trae el evento.
+  - Los productos nuevos desde diciembre se clasifican con un puente: cada `category_id` nuevo toma la categoría de oct–nov de la mayoría de sus productos compartidos, siempre que sean al menos 5 y haya un 80 % de acuerdo.
   - `sql/15_checks.sql` falla si una categoría salta más de 4x en una semana.
-- **Inventario derivado (supuesto).** Stock fijo de 50 unidades por producto cada lunes; cada `purchase` resta una unidad. `quiebre = true` cuando la demanda de la semana alcanza el stock.
-- **Pronóstico.** ARIMA_PLUS con una serie diaria de compras por categoría. Se entrena solo con 2019 y se compara contra ene–abr 2020 reales, que el modelo nunca vio. Marzo y abril incluyen el confinamiento por COVID-19 en Rusia.
-  - Cada error se compara con una referencia ingenua: el promedio oct–dic 2019 de cada categoría. Con tres meses de historia ARIMA no la supera; se necesita al menos un año.
+- **Inventario derivado (supuesto).** Cada lunes, cada producto empieza con un stock fijo de 50 unidades, y cada `purchase` resta una. `quiebre = true` indica que la demanda de la semana alcanzó el stock.
+- **Pronóstico.** Usamos ARIMA_PLUS con una serie diaria de compras por categoría. El modelo se entrena solo con 2019 y se compara con los datos reales de ene–abr 2020, que nunca vio. Marzo y abril incluyen el confinamiento por COVID-19 en Rusia.
+  - Cada error se compara con una referencia ingenua, el promedio de oct–dic 2019 de cada categoría. Con tres meses de historia ARIMA no logra superarla, y haría falta al menos un año.
   - Los días en que el origen dejó de registrar compras (14–15 nov 2019, 1–2 ene y 20–21 abr 2020) se excluyen del entrenamiento y de la evaluación (`v_dias_compras_incompletas`).
-  - Control con Olist (`sql/18_forecast_olist.sql`): 17 meses de historia, cinco métodos sobre jun–ago 2018. Más historia no ayuda a ARIMA y TimesFM; XGBoost con variables de nivel y día de semana empata con el promedio.
-- **Zonas horarias.** REES46 ya viene en UTC; Olist se convierte de `America/Sao_Paulo` a UTC.
-- **Tableros.** Looker Studio lee solo tablas `agg_*`, `ml_*` y la vista materializada `mv_eventos_hora`, nunca `events_raw`.
+  - El control con Olist (`sql/18_forecast_olist.sql`) usa 17 meses de historia y compara cinco métodos sobre jun–ago 2018. Tener más historia no ayuda a ARIMA ni a TimesFM, mientras que XGBoost, con variables de nivel y de día de semana, queda prácticamente empatado con el promedio.
+- **Zonas horarias.** REES46 ya viene en UTC, y Olist se convierte de `America/Sao_Paulo` a UTC.
+- **Tableros.** Looker Studio solo lee las tablas `agg_*` y `ml_*` y la vista materializada `mv_eventos_hora`. Nunca consulta `events_raw`.
 - **Infraestructura como código.**
-  - `terraform/` adopta con bloques `import` los recursos que crearon los scripts. `terraform plan`: 49 importados, 0 creados, 0 destruidos (`docs/evidencia/terraform_plan.txt`). El `apply` queda manual.
-  - Quedan fuera, a propósito: las tablas (las crea la capa SQL), el job de Dataflow y la VM (efímeros), el valor del secreto, el presupuesto y el glosario.
-- **CI.** `.github/workflows/ci.yml` valida en cada push: `terraform fmt` / `validate`, sintaxis de shell (`shellcheck`), Python, JSON, y la UDF con un evento válido y otro inválido. En `main`, una vez configurado Workload Identity Federation, también corre `terraform plan` y un dry run del SQL.
+  - `terraform/` adopta con bloques `import` los recursos que crearon los scripts. El `terraform plan` da 49 importados, 0 creados y 0 destruidos (`docs/evidencia/terraform_plan.txt`). El `apply` se hace a mano.
+  - Dejamos fuera, a propósito, las tablas (las crea la capa SQL), el job de Dataflow y la VM (que son efímeros), el valor del secreto, el presupuesto y el glosario.
+- **CI.** En cada push, `.github/workflows/ci.yml` ejecuta `terraform fmt` y `validate`, revisa la sintaxis de shell con `shellcheck`, valida Python y JSON, y prueba la UDF con un evento válido y otro inválido. En `main`, una vez configurado Workload Identity Federation, también corre `terraform plan` y un dry run del SQL.
 
 ## Looker Studio
 
@@ -212,10 +214,10 @@ Tiene 7 páginas:
 6. Calidad y gobierno
 7. Pronóstico de demanda
 
-Fuentes: tablas `agg_*` y `ml_*` del dataset `ecommerce`, y `mv_eventos_hora`. Las fuentes guardan caché de
-12 h: antes de presentar, ⋮ → Actualizar datos.
+Las fuentes son las tablas `agg_*` y `ml_*` del dataset `ecommerce` y la vista `mv_eventos_hora`. Como guardan
+caché durante 12 h, antes de presentar conviene usar ⋮ → Actualizar datos.
 
-Para recrearlo, abre `docs/looker_crear_reporte.url` (Linking API): crea el reporte con `agg_pedidos_hora` ya
+Para recrear el reporte, abre `docs/looker_crear_reporte.url` (Linking API), que lo crea con `agg_pedidos_hora` ya
 conectada. Las demás fuentes se agregan con "Agregar datos".
 
 ## Runbook DRP
