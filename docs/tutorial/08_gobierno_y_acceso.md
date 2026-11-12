@@ -34,6 +34,11 @@ El glosario define diez conceptos: evento, sesión, pedido, embudo y tasa de con
 
 ![Glosario de negocio en Dataplex (Knowledge Catalog)](img/08_glosario.png)
 
+**Crear el glosario en la consola.** **Dataplex** → **Glosarios** → **Crear glosario**: nombre (`Glosario eCommerce (Grupo 1)`)
+y ubicación `global`; luego se agregan los términos uno por uno. (La captura es del formulario sin enviar.)
+
+![Formulario de creación del glosario](img/08_crear_glosario.png)
+
 **Linaje.** Con la API de linaje habilitada, cada trabajo de BigQuery registra de qué tablas lee y a cuáles escribe.
 No requiere más configuración: en BigQuery, abre una tabla (aquí `fact_pedidos`) → pestaña **Linaje** y se ve de qué
 tablas de Olist sale. Para seguir un clic crudo hasta la métrica, abre `agg_embudo_categoria_dia` y expande hacia atrás
@@ -64,6 +69,12 @@ Resultado en la consola (**BigQuery** → **Administración** → **Etiquetas de
 con control de acceso activado y sus dos etiquetas.
 
 ![Taxonomía datos-personales con las etiquetas identificador_usuario e identificador_cliente](img/08_taxonomia_policy_tags.png)
+
+**Crear la taxonomía en la consola.** **BigQuery** → **Administración** → **Etiquetas de política** → **Crear taxonomía**: nombre
+`datos-personales`, descripción, región y la primera etiqueta (`identificador_usuario`); después se activa el control de acceso.
+(Formulario sin enviar.)
+
+![Formulario de creación de la taxonomía](img/08_crear_taxonomia.png)
 
 ## 8.4 Acceso por fila: row access policies
 

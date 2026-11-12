@@ -54,6 +54,14 @@ otorgan después, recurso por recurso, como muestran los comandos de arriba.
 
 ![Formulario de creación de una cuenta de servicio](img/03_crear_cuenta_servicio.png)
 
+**Otorgar un rol en la consola.** **IAM y administración** → **IAM** → **Otorgar acceso**: en *Entidades nuevas* se escribe
+el correo de la cuenta de servicio y en *Seleccionar un rol* se busca el rol por nombre (aquí, *Visualizador de Monitoring*
+para `sa-ingesta`). Las capturas muestran el panel sin guardar; los roles del proyecto real se otorgaron con el script.
+
+![Panel Otorgar acceso: entidad nueva](img/03_otorgar_rol_1.png)
+
+![Panel Otorgar acceso: búsqueda del rol](img/03_otorgar_rol_2.png)
+
 ## 3.2 El token de Kaggle en Secret Manager
 
 El token de Kaggle nunca se copia con `scp` ni se guarda en el repositorio. Se crea una sola vez desde tu laptop:

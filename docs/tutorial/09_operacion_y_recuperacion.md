@@ -40,6 +40,14 @@ servicio, que se corrigió con `--update_credentials`, y las corridas correctas 
 
 ![Detalle de la consulta programada refresco-diario-incremental](img/09_consulta_programada_detalle.png)
 
+**Crear una consulta programada en la consola.** En el editor de BigQuery, con la consulta escrita: **Programar** → **Crear
+consulta programada**. Se indica el nombre (`refresco-diario-incremental`), la frecuencia (*Días*, 06:00 UTC) y, en *Cuenta
+de servicio*, `sa-transform`. (Capturas del formulario sin enviar.)
+
+![Formulario de consulta programada: nombre y frecuencia](img/09_crear_consulta_1.png)
+
+![Formulario de consulta programada: cuenta de servicio](img/09_crear_consulta_2.png)
+
 > Desde el 6 de noviembre de 2026 las dos consultas están **en pausa**, porque los datos ya no cambian y el refresco
 > diario facturaba unos 60 GiB por corrida tras la carga de 2020. Para reactivarlas:
 > `bq update --transfer_config --no_auto_scheduling=false <nombre de la configuración>` (los nombres salen de
@@ -66,6 +74,12 @@ Cada política se puede abrir para ver su condición. Esta es la de `system_lag`
 (la línea roja punteada).
 
 ![Detalle de la política Dataflow system lag > 5 min](img/09_alerta_detalle.png)
+
+**Crear una alerta en la consola.** **Monitoring** → **Alertas** → **Crear política**: en *Seleccionar una métrica* se busca
+`Dataflow Job` y se elige la categoría *Job* → *System Lag*; luego se define el umbral (más de 300 s durante 5 min) y el canal de
+notificación. (La captura muestra el selector de métricas; no se guardó una política nueva.)
+
+![Selector de métricas al crear una alerta](img/09_crear_alerta_metrica.png)
 
 ![Políticas de alerta en Cloud Monitoring](img/09_alertas.png)
 
