@@ -94,7 +94,6 @@ Resultado medido: restauración al 100 % en 6 a 7 segundos con cualquiera de los
 - `terraform/` adopta con bloques `import` los recursos que crearon los scripts (49 recursos). `terraform plan` da
   «49 a importar, 0 a crear, 0 a destruir» (`docs/evidencia/terraform_plan.txt`). El `apply` se hace a mano y no se
   ejecutó, para no tocar lo que ya funciona.
-- Quedaron fuera a propósito: las tablas (las crea la capa SQL), el job de Dataflow y la VM (efímeros), el valor del
-  secreto, el presupuesto y el glosario.
+- No se incluyeron de forma deliberada las tablas (las genera la capa SQL), el job de Dataflow y la VM (son temporales), el contenido del secreto, el presupuesto y el glosario.
 - `.github/workflows/ci.yml` corre en cada `push`: `terraform fmt` y `validate`, `bash -n` y `shellcheck`, validación de
   Python y JSON, prueba de la UDF con un evento válido y uno inválido, y la prueba unitaria del pipeline Beam.

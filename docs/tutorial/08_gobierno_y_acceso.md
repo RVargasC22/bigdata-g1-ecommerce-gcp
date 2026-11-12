@@ -30,8 +30,7 @@ gcloud dataplex glossaries terms create pedido --glossary=glosario-ecommerce --l
   --display-name="Pedido" --description="REES46: sesión con al menos un evento purchase. Olist: un order_id."
 ```
 
-Los términos son: evento, sesión, pedido, embudo de conversión, tasa de conversión, categoría común, tiempo de entrega,
-quiebre de stock, factor de pico y dato personal.
+El glosario define diez conceptos: evento, sesión, pedido, embudo y tasa de conversión, categoría común, tiempo de entrega, quiebre de stock, factor de pico y dato personal.
 
 ![Glosario de negocio en Dataplex (Knowledge Catalog)](img/08_glosario.png)
 
