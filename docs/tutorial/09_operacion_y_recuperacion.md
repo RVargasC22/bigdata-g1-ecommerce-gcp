@@ -35,6 +35,11 @@ duplicados, saltos de más de 4x por categoría en una semana y proporción de c
 
 ![Consultas programadas en BigQuery](img/09_consultas_programadas.png)
 
+Al abrir una consulta programada se ve su historial de ejecuciones (arriba, el fallo del 5 de noviembre por la cuenta de
+servicio, que se corrigió con `--update_credentials`, y las corridas correctas posteriores):
+
+![Detalle de la consulta programada refresco-diario-incremental](img/09_consulta_programada_detalle.png)
+
 > Desde el 6 de noviembre de 2026 las dos consultas están **en pausa**, porque los datos ya no cambian y el refresco
 > diario facturaba unos 60 GiB por corrida tras la carga de 2020. Para reactivarlas:
 > `bq update --transfer_config --no_auto_scheduling=false <nombre de la configuración>` (los nombres salen de
@@ -56,6 +61,11 @@ Crea un canal de correo (`ALERT_EMAIL`) y una política por cada `monitoring/ale
 
 Cada política incluye en su documentación la acción de recuperación. Por ejemplo, la de `system_lag` indica relanzar
 `streaming/launch_dataflow.sh`; Pub/Sub retiene 7 días.
+
+Cada política se puede abrir para ver su condición. Esta es la de `system_lag`: umbral de 300 s sostenido 5 minutos
+(la línea roja punteada).
+
+![Detalle de la política Dataflow system lag > 5 min](img/09_alerta_detalle.png)
 
 ![Políticas de alerta en Cloud Monitoring](img/09_alertas.png)
 

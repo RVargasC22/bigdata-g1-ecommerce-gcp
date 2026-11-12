@@ -179,6 +179,8 @@ SELECT timestamp, payloadString, errorMessage FROM ecommerce.events_deadletter O
 | `no es json` | `beam: Expecting value: line 1 column 1 (char 0)` |
 | `{"event_time": "…", "event_type": "hack", "product_id": "1"}` | `beam: invalid event_type: hack` |
 
+![Vista previa de events_deadletter en BigQuery, con los mensajes rechazados y su motivo](img/05_cola_errores.png)
+
 (Las filas con prefijo `beam:` las escribe el pipeline del capítulo 6, que usa el mismo formato de tabla.)
 
 ## 5.6 Detener el job sin perder mensajes

@@ -30,6 +30,22 @@ gcloud compute ssh ingest-vm --zone=us-central1-a --tunnel-through-iap --command
 - El acceso es por **IAP** (`--tunnel-through-iap`), sin abrir el puerto 22 a internet.
 - `e2-standard-4` con disco de 200 GB alcanza para descomprimir un mes de eventos.
 
+**Crear la VM en la consola.** **Compute Engine** → **Instancias de VM** → **Crear instancia**: nombre `ingest-vm`, región
+`us-central1`, zona `us-central1-a`, serie E2 y tipo `e2-standard-4`. Más abajo, en *SO y almacenamiento*, el disco de
+arranque es Debian 12 de 200 GB estándar y, en *Seguridad*, la cuenta de servicio es `sa-ingesta` con acceso total a las
+APIs de Cloud (el acceso efectivo lo limitan los roles de la cuenta). (La captura muestra el formulario sin enviar.)
+
+![Formulario de creación de la VM](img/04_crear_vm.png)
+
+Una vez creada (la captura es de la VM real, relanzada el 12 de noviembre), el detalle muestra la etiqueta
+`componente: ingesta`, el tipo de máquina, el disco de 200 GB y la cuenta de servicio:
+
+![Detalle de la VM: información básica y etiquetas](img/04_vm_detalle_1.png)
+
+![Detalle de la VM: tipo de máquina e2-standard-4](img/04_vm_detalle_2.png)
+
+![Detalle de la VM: cuenta de servicio sa-ingesta](img/04_vm_detalle_3.png)
+
 Comprobación: dentro de la VM, el token está en su lugar y Kaggle responde con la lista de archivos
 (salida real del 12 de noviembre de 2026, `docs/evidencia/vm_ingesta_12nov.txt`):
 

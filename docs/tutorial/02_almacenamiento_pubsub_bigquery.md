@@ -73,6 +73,12 @@ La tabla se **particiona por día** y se **agrupa (clustering)** por `event_type
 filtra por fecha escanea solo esas particiones. `events_staging` recibe los CSV con todas las columnas como texto y
 vence a los 30 días.
 
+Desde la consola, el mismo dataset se crea en el explorador de BigQuery: ⋮ junto al proyecto → **Crear un conjunto de
+datos**. Se escribe el ID, se elige la ubicación multirregión `US` y, en *Opciones avanzadas*, se puede ajustar el
+tiempo de viaje en el tiempo. (La captura usa el nombre ilustrativo `ecommerce_demo`; el formulario no se envió.)
+
+![Formulario de creación de un dataset](img/02_crear_dataset.png)
+
 ## 2.3 Pub/Sub: un tópico y una suscripción por consumidor
 
 ```bash
@@ -89,6 +95,17 @@ gcloud pubsub subscriptions create rees46-events-beam --topic=rees46-events \
 ![Tópico rees46-events con sus dos suscripciones](img/02_pubsub_topic.png)
 
 ![Detalle de la suscripción rees46-events-dataflow](img/02_pubsub_suscripcion.png)
+
+**Crear el tópico en la consola.** **Pub/Sub** → **Temas** → **Crear tema**: se escribe el ID, se desmarca *Agregar una
+suscripción predeterminada* (creamos las nuestras) y se marca *Habilitar la retención de mensajes* para fijar 7 días.
+
+![Formulario de creación del tópico](img/02_crear_topico.png)
+
+**Crear la suscripción.** **Pub/Sub** → **Suscripciones** → **Crear suscripción**: ID `rees46-events-dataflow`, el
+tópico `rees46-events`, tipo de envío *Extracción* (*pull*; Dataflow consulta los mensajes), plazo de confirmación de 60
+segundos y retención de 7 días. Se repite con `rees46-events-beam`.
+
+![Formulario de creación de la suscripción](img/02_crear_suscripcion.png)
 
 ## 2.4 Presupuesto
 

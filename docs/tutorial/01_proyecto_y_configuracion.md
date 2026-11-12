@@ -54,6 +54,34 @@ cp terraform/terraform.tfvars.example terraform/terraform.tfvars
 
 Reemplaza `my-gcp-project` por tu `PROJECT_ID` en todas las variables que lo contienen.
 
+## Crear el bucket desde la consola (referencia)
+
+El bucket real lo crea `infra/01_setup.sh` (capítulo 2). Si prefieres hacerlo a mano, el asistente de la consola
+(**Cloud Storage** → **Buckets** → **Crear**) tiene cinco pasos. En las capturas usamos el nombre ilustrativo
+`bigdata-g1-demo-raw` porque el nombre real ya existe (los nombres de bucket son únicos en todo el mundo); el formulario
+no se envió.
+
+1. **Primeros pasos:** nombre permanente y único.
+
+![Paso 1: nombre del bucket](img/01_crear_bucket_1.png)
+
+2. **Dónde almacenar los datos:** multirregión `US` (misma ubicación que BigQuery).
+
+![Paso 2: ubicación multirregión US](img/01_crear_bucket_2.png)
+
+3. **Cómo almacenarlos:** clase de almacenamiento predeterminada `Standard`.
+
+![Paso 3: clase Standard](img/01_crear_bucket_3.png)
+
+4. **Cómo controlar el acceso:** prevención de acceso público activada y control de acceso uniforme.
+
+![Paso 4: acceso uniforme](img/01_crear_bucket_4.png)
+
+5. **Cómo proteger los datos:** marca *Control de versiones de objetos*. La política de eliminación no definitiva de 7 días
+   queda con el valor predeterminado.
+
+![Paso 5: protección de datos con versionado](img/01_crear_bucket_5.png)
+
 ## 1.3 Habilitar las APIs
 
 `infra/01_setup.sh` y los demás scripts habilitan lo que necesitan; si prefieres hacerlo de una vez:

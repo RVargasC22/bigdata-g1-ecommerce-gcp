@@ -48,6 +48,12 @@ Al final el script **quita el rol Editor** a la cuenta por defecto de Compute En
 
 ![Cuentas de servicio del proyecto](img/03_cuentas_servicio.png)
 
+**Crear una cuenta de servicio en la consola.** **IAM y administración** → **Cuentas de servicio** → **Crear cuenta de
+servicio**: nombre, ID (queda el correo `sa-ingesta@<proyecto>.iam.gserviceaccount.com`) y descripción. Los permisos se
+otorgan después, recurso por recurso, como muestran los comandos de arriba.
+
+![Formulario de creación de una cuenta de servicio](img/03_crear_cuenta_servicio.png)
+
 ## 3.2 El token de Kaggle en Secret Manager
 
 El token de Kaggle nunca se copia con `scp` ni se guarda en el repositorio. Se crea una sola vez desde tu laptop:
@@ -64,6 +70,11 @@ gcloud secrets versions access latest --secret=kaggle-token --project=$PROJECT_I
 ```
 
 ![Secreto kaggle-token en Secret Manager](img/03_secret_manager.png)
+
+**Crear el secreto en la consola.** **Seguridad** → **Secret Manager** → **Crear secreto**: el nombre es `kaggle-token`
+y el valor se sube como archivo (`~/.kaggle/access_token`) o se pega. Se deja la replicación automática.
+
+![Formulario de creación del secreto](img/03_crear_secreto.png)
 
 ## 3.3 Cómo comprobar el mínimo privilegio
 

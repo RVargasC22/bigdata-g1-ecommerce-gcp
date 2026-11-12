@@ -60,6 +60,11 @@ Efecto: quien no tiene ese rol recibe «acceso denegado» si incluye la columna 
 resto de la tabla. Prueba (`docs/evidencia/acceso_fino.txt`): la cuenta del analista de ejemplo ejecuta
 `SELECT user_id …` y falla; `SELECT * EXCEPT (user_id) …` funciona.
 
+Resultado en la consola (**BigQuery** → **Administración** → **Etiquetas de política**): la taxonomía `datos-personales`
+con control de acceso activado y sus dos etiquetas.
+
+![Taxonomía datos-personales con las etiquetas identificador_usuario e identificador_cliente](img/08_taxonomia_policy_tags.png)
+
 ## 8.4 Acceso por fila: row access policies
 
 ```bash

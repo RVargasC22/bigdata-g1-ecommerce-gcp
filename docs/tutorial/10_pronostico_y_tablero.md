@@ -65,6 +65,17 @@ Pasos para recrearlo:
 | 6. Calidad y gobierno | tablas de `sql/13_quality_dashboard.sql` |
 | 7. Pronóstico de demanda | `ml_pronostico_*`, `ml_resumen_*`, `ml_eval_*` |
 
+Así se ven las páginas principales. La 1 resume pedidos, ingresos y eventos con su serie diaria; la 5 compara el flujo por
+lotes con el de streaming; la 6 muestra la reconciliación de los replays y las alertas; la 7 compara el pronóstico con lo real.
+
+![Página 1: Pedidos e ingresos](img/10_looker_pagina_1.png)
+
+![Página 5: Streaming en vivo](img/10_looker_pagina_5.png)
+
+![Página 6: Calidad y gobierno](img/10_looker_pagina_6.png)
+
+![Página 7: Pronóstico de demanda](img/10_looker_pagina_7.png)
+
 4. Looker guarda los datos en caché durante 12 horas: antes de presentar usa ⋮ → **Actualizar datos**, y tras cambiar un
    esquema, **Actualizar campos** en la fuente.
 
