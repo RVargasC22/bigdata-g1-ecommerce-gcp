@@ -77,9 +77,23 @@ Cada política se puede abrir para ver su condición. Esta es la de `system_lag`
 
 **Crear una alerta en la consola.** **Monitoring** → **Alertas** → **Crear política**: en *Seleccionar una métrica* se busca
 `Dataflow Job` y se elige la categoría *Job* → *System Lag*; luego se define el umbral (más de 300 s durante 5 min) y el canal de
-notificación. (La captura muestra el selector de métricas; no se guardó una política nueva.)
+notificación. Paso a paso (formularios sin guardar; no se creó una política nueva):
+
+1. Selector de métricas: se busca `Dataflow Job`, categoría *Job*.
 
 ![Selector de métricas al crear una alerta](img/09_crear_alerta_metrica.png)
+
+2. Condición: con la métrica *System lag* elegida, la ventana móvil es de 5 min y la función `mean`.
+
+![Alerta: condición con la métrica System lag](img/09_crear_alerta_condicion.png)
+
+3. Activador: tipo *Threshold*, *Por encima del umbral*, valor `300000` ms (300 s = 5 min), que es lo que muestra la política real.
+
+![Alerta: tipo de condición y umbral](img/09_crear_alerta_umbral.png)
+
+4. Notificaciones: se activa el canal de notificaciones, se elige el canal y un asunto, y **Crear política**.
+
+![Alerta: canales de notificación](img/09_crear_alerta_notificaciones.png)
 
 ![Políticas de alerta en Cloud Monitoring](img/09_alertas.png)
 

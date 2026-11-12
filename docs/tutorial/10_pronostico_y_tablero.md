@@ -17,6 +17,17 @@ Pregunta: ¿se puede pronosticar la demanda diaria por categoría para dimension
    nunca vio.
 4. Compara cada error (WAPE) con una referencia ingenua: el promedio diario de oct–dic de cada categoría.
 
+**En la consola.** Se abre el editor de BigQuery (**Consulta en SQL**) y se escribe el `CREATE MODEL`; antes de ejecutar,
+el editor valida la consulta y avisa cuántos bytes procesará (aquí 2,32 MB). Se muestra la versión autocontenida, sin la variable
+`fin_entrenamiento` del script, y no se ejecutó.
+
+![CREATE MODEL de ARIMA_PLUS en el editor](img/10_bqml_crear_modelo.png)
+
+Cuando termina, el modelo aparece en el dataset y la pestaña **Evaluación** muestra los parámetros (p, d, q) que eligió ARIMA_PLUS para
+cada categoría:
+
+![Evaluación del modelo: una serie ARIMA por categoría](img/10_bqml_evaluacion.png)
+
 Resultado (WAPE, menor es mejor): con 3 meses de historia ARIMA **no supera** al promedio.
 
 | Tramo | ARIMA_PLUS | Promedio simple |
@@ -52,7 +63,9 @@ Pasos para recrearlo:
 
 1. Abre el archivo `docs/looker_crear_reporte.url` (usa la *Linking API* de Looker Studio): crea un reporte nuevo con
    `agg_pedidos_hora` ya conectada.
-2. Con **Agregar datos** → **BigQuery** conecta el resto de las fuentes del dataset `ecommerce`.
+2. Con **Añadir datos** → **BigQuery** conecta el resto de las fuentes del dataset `ecommerce`.
+
+![Añadir datos al informe: conectores](img/10_looker_anadir_datos.png)
 3. Construye las 7 páginas:
 
 | Página | Fuente principal |
@@ -64,6 +77,13 @@ Pasos para recrearlo:
 | 5. Streaming en vivo | `stream_categoria_minuto`, `mv_eventos_hora` |
 | 6. Calidad y gobierno | tablas de `sql/13_quality_dashboard.sql` |
 | 7. Pronóstico de demanda | `ml_pronostico_*`, `ml_resumen_*`, `ml_eval_*` |
+
+Cada gráfico se arma con **Añadir un gráfico** (aquí una serie temporal) y se configura en el panel de la derecha: fuente de datos
+(`agg_pedidos_hora`), dimensión del eje X (`hora`) y métricas (`SUM pedidos`, `SUM ingresos`).
+
+![Tipos de gráfico disponibles](img/10_looker_tipos_grafico.png)
+
+![Configuración de la serie temporal de la página 1](img/10_looker_config_grafico.png)
 
 Así se ven las páginas principales. La 1 resume pedidos, ingresos y eventos con su serie diaria; la 5 compara el flujo por
 lotes con el de streaming; la 6 muestra la reconciliación de los replays y las alertas; la 7 compara el pronóstico con lo real.

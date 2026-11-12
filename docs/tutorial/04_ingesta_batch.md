@@ -33,7 +33,12 @@ gcloud compute ssh ingest-vm --zone=us-central1-a --tunnel-through-iap --command
 **Crear la VM en la consola.** **Compute Engine** → **Instancias de VM** → **Crear instancia**: nombre `ingest-vm`, región
 `us-central1`, zona `us-central1-a`, serie E2 y tipo `e2-standard-4`. Más abajo, en *SO y almacenamiento*, el disco de
 arranque es Debian 12 de 200 GB estándar y, en *Seguridad*, la cuenta de servicio es `sa-ingesta` con acceso total a las
-APIs de Cloud (el acceso efectivo lo limitan los roles de la cuenta). (La captura muestra el formulario sin enviar.)
+APIs de Cloud (el acceso efectivo lo limitan los roles de la cuenta). (La captura muestra el formulario sin enviar.) Las dos secciones de abajo se ven así: el disco de arranque (Debian 12, disco
+persistente estándar, 200 GB) y la identidad (cuenta `sa-ingesta` con acceso total a las APIs de Cloud).
+
+![Disco de arranque: Debian 12, estándar, 200 GB](img/04_crear_vm_disco.png)
+
+![Seguridad: cuenta de servicio sa-ingesta](img/04_crear_vm_seguridad.png)
 
 ![Formulario de creación de la VM](img/04_crear_vm.png)
 
