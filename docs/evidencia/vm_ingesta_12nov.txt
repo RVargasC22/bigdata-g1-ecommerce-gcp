@@ -1,0 +1,19 @@
+/home/usuario/app:
+config.env
+ingest
+monitoring
+streaming
+/home/usuario/app/streaming:
+__pycache__
+beam
+launch_dataflow.sh
+producer.py
+run_replays.sh
+stop_dataflow.sh
+udf
+name                size  creationDate                
+------------  ----------  --------------------------  
+2019-Nov.csv  9006762395  2019-12-09 20:52:13.431000  
+2019-Oct.csv  5668612855  2019-12-09 20:51:21.345000  
+total 4
+-rw------- 1 usuario usuario 38 Nov 12 15:17 access_token

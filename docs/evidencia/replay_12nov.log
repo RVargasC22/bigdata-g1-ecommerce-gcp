@@ -1,0 +1,35 @@
+dpkg-preconfigure: unable to re-open stdin: No such file or directory
+Copying gs://bigdata-g1-ecommerce-1105-raw/replay/producer.py to file://./producer.py
+Copying gs://bigdata-g1-ecommerce-1105-raw/replay/vm_replay.py to file://./vm_replay.py
+  
+Copying gs://bigdata-g1-ecommerce-1105-raw/replay/beam_test-000000000000.csv to file://./beam_test-000000000000.csv
+Copying gs://bigdata-g1-ecommerce-1105-raw/replay/beam_test-000000000001.csv to file://./beam_test-000000000001.csv
+Copying gs://bigdata-g1-ecommerce-1105-raw/replay/beam_test-000000000002.csv to file://./beam_test-000000000002.csv
+Copying gs://bigdata-g1-ecommerce-1105-raw/replay/beam_test-000000000003.csv to file://./beam_test-000000000003.csv
+Copying gs://bigdata-g1-ecommerce-1105-raw/replay/beam_test-000000000004.csv to file://./beam_test-000000000004.csv
+Copying gs://bigdata-g1-ecommerce-1105-raw/replay/beam_test-000000000005.csv to file://./beam_test-000000000005.csv
+Copying gs://bigdata-g1-ecommerce-1105-raw/replay/beam_test-000000000006.csv to file://./beam_test-000000000006.csv
+Copying gs://bigdata-g1-ecommerce-1105-raw/replay/beam_test-000000000007.csv to file://./beam_test-000000000007.csv
+Copying gs://bigdata-g1-ecommerce-1105-raw/replay/beam_test-000000000008.csv to file://./beam_test-000000000008.csv
+Copying gs://bigdata-g1-ecommerce-1105-raw/replay/beam_test-000000000009.csv to file://./beam_test-000000000009.csv
+Copying gs://bigdata-g1-ecommerce-1105-raw/replay/beam_test-000000000010.csv to file://./beam_test-000000000010.csv
+Copying gs://bigdata-g1-ecommerce-1105-raw/replay/beam_test-000000000011.csv to file://./beam_test-000000000011.csv
+Copying gs://bigdata-g1-ecommerce-1105-raw/replay/beam_test-000000000012.csv to file://./beam_test-000000000012.csv
+Copying gs://bigdata-g1-ecommerce-1105-raw/replay/beam_test-000000000013.csv to file://./beam_test-000000000013.csv
+Copying gs://bigdata-g1-ecommerce-1105-raw/replay/beam_test-000000000014.csv to file://./beam_test-000000000014.csv
+Copying gs://bigdata-g1-ecommerce-1105-raw/replay/beam_test-000000000015.csv to file://./beam_test-000000000015.csv
+...
+
+Average throughput: 64.5MiB/s
+slice: 227830 events 2019-11-17 10:30:00 UTC - 2019-11-17 10:59:59 UTC
+published 3 invalid messages
+START 2026-11-12T15:22:00.754860+00:00
+36530 events, 1218 ev/s, event_time=2019-11-17 10:35:00 UTC, failed=0
+73280 events, 1221 ev/s, event_time=2019-11-17 10:40:00 UTC, failed=0
+110784 events, 1231 ev/s, event_time=2019-11-17 10:45:00 UTC, failed=0
+149083 events, 1242 ev/s, event_time=2019-11-17 10:50:00 UTC, failed=0
+188395 events, 1256 ev/s, event_time=2019-11-17 10:55:00 UTC, failed=0
+DONE 227830 events in 180s (1265 ev/s), confirmed=227830, failed=0
+END 2026-11-12T15:25:01.462647+00:00
+Copying file:///var/log/replay.log to gs://bigdata-g1-ecommerce-1105-raw/replay/replay.log
+  
