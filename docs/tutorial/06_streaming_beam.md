@@ -150,4 +150,6 @@ inválidos en `events_deadletter`.
 > **Importante al repetir la prueba.** El job de la plantilla (capítulo 5) también recibe estos mensajes y los
 > insertaría por segunda vez en `events_raw`. Detén ese job antes (`./streaming/stop_dataflow.sh`) o desplaza su
 > suscripción al presente con `gcloud pubsub subscriptions seek rees46-events-dataflow --time=<ahora>`.
-> Si repites un tramo con el job de la plantilla encendido, tendrás que borrar los duplicados de `events_raw`.
+> Si repites un tramo con el job de la plantilla encendido, limpia los duplicados con
+> `./streaming/dedup_replay.sh "2019-11-17 10:30:00" "2019-11-17 11:00:00" 2026-11-12`: deja una copia de cada evento en
+> `events_raw` y borra las filas Beam escritas desde esa fecha (este último paso, una hora después de detener el job).
