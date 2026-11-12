@@ -125,6 +125,11 @@ bq query --use_legacy_sql=false "EXPORT DATA OPTIONS (uri='gs://$BUCKET/lookup/d
 Salida real: `Submitted job: 2026-11-12_07_18_12-1394385687534020345`. Para reemplazar un job en marcha conservando su
 estado: `UPDATE_JOB=<nombre del job> ./streaming/beam/launch.sh`.
 
+Las métricas del job Beam muestran la capacidad de procesamiento de cada etapa (`Validar`, `Enriquecer`, `Contar`) durante
+el replay y el escalado automático, con un solo worker:
+
+![Métricas del job Beam: capacidad de procesamiento por etapa](img/06_df_metricas_beam.png)
+
 ## 6.6 Probar de punta a punta y conciliar con el batch
 
 `streaming/beam/test_replay.sh` exporta de `events_raw` un tramo del 17/11/2019 (por defecto 30 minutos), levanta una VM

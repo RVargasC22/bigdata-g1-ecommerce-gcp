@@ -122,6 +122,11 @@ de los fallidos (`WriteFailedRecords`).
 
 ![Grafo del job de la plantilla en ejecución](img/05_df_grafo_plantilla.png)
 
+En la pestaña **Métricas del trabajo** se ve la capacidad de procesamiento por paso, la latencia del sistema y el
+escalado automático del job (la captura es del job ya drenado, con el tramo del replay a las 10:22–10:25, hora de Lima):
+
+![Métricas del job de la plantilla: capacidad de procesamiento y escalado](img/05_df_metricas_plantilla.png)
+
 Decisiones de configuración:
 
 - **Storage Write API** en lugar de *streaming inserts*: más barata y permite hacer `DELETE` sobre filas recientes (la

@@ -46,5 +46,5 @@ Repositorio: <https://github.com/RVargasC22/bigdata-g1-ecommerce-gcp>
 
 Las capturas muestran la consola de Google Cloud en español. Cuando un recurso es efímero (la VM y los jobs de
 Dataflow), la captura se tomó mientras existía y el capítulo indica cómo apagarlo. Los gráficos de métricas de
-Dataflow no cargaron en la red de la oficina durante la captura; para esos datos se usa `monitoring/export_metrics.py`
-y la evidencia de `docs/evidencia/metricas_pico.csv`.
+Dataflow se capturaron con el job ya drenado; las métricas del pico completo están en
+`monitoring/export_metrics.py` y en `docs/evidencia/metricas_pico.csv`.

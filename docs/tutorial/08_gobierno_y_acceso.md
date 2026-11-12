@@ -84,10 +84,18 @@ accesos completos llevan su propia política con `TRUE`. Los `CREATE OR REPLACE 
 hay que volver a ejecutar este script tras reconstruir `fact_pedidos`. Resultado: el analista ve solo la categoría
 muebles.
 
-La captura muestra el esquema de `fact_pedidos` (las columnas de las tablas con policy tag muestran un ícono de
-etiqueta en la columna correspondiente):
+La consola de BigQuery no muestra las políticas de fila en la pestaña de la tabla, así que se verifican con la vista de
+metadatos (es gratis):
 
-![Esquema de fact_pedidos](img/08_esquema_fact_pedidos.png)
+```sql
+SELECT row_access_policy_name, filter_predicate
+FROM ecommerce.INFORMATION_SCHEMA.ROW_ACCESS_POLICIES WHERE table_name = 'fact_pedidos';
+```
+
+| row_access_policy_name | filter_predicate |
+|---|---|
+| `analista_muebles` | `categoria_comun = 'muebles'` |
+| `acceso_total` | `TRUE` |
 
 ## 8.5 Límite conocido
 
