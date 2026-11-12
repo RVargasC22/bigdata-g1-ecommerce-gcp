@@ -9,6 +9,8 @@ BigQuery ML.
 - **Datos:**
   - REES46 *multi category store*: eventos de navegación y compra, oct 2019 – abr 2020 (410 M eventos; el dataset público termina en abril). Octubre y noviembre vienen de Kaggle; diciembre a abril, del espejo del autor.
   - Olist: pedidos y entregas en Brasil, 2016–2018.
+- **Tutorial paso a paso:** [`docs/tutorial/`](docs/tutorial/README.md) explica cómo montar toda la plataforma
+  (proyecto, Pub/Sub, Dataflow, BigQuery, gobierno y operación), con código, comandos y capturas de la consola.
 - **Entrega P2 (7 nov 2026):** versión congelada en el tag
   [`p2-entrega`](https://github.com/RVargasC22/bigdata-g1-ecommerce-gcp/tree/p2-entrega); la guía por criterio
   de la rúbrica está en [`docs/entrega_p2.md`](docs/entrega_p2.md).
@@ -67,7 +69,7 @@ monitoring/   alertas de Cloud Monitoring y export de métricas del pico
 drp/          snapshots y simulacro de recuperación
 terraform/    infraestructura como código (adopta los recursos existentes con bloques import)
 seed/         mapeo manual de categorías REES46 / Olist -> categoría común
-docs/         correcciones al documento del examen, entrega P2 (entrega_p2.md) y evidencia de las pruebas
+docs/         tutorial paso a paso (tutorial/), correcciones al documento del examen, entrega P2 (entrega_p2.md) y evidencia de las pruebas
 ```
 
 ## Requisitos
