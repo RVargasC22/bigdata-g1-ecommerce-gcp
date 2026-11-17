@@ -52,7 +52,7 @@ footer()
 
 # 3 Situación actual
 slide(); title("Situación actual")
-rows = [("410 M", "eventos en events_raw"), ("3", "capas: bronze, silver, gold"), ("7", "páginas de tablero en Looker Studio"), ("0", "mensajes perdidos en 9,99 M de replay")]
+rows = [("410M", "eventos en events_raw"), ("3", "capas: bronze, silver, gold"), ("7", "páginas de tablero en Looker Studio"), ("0", "mensajes perdidos en 9,99 M de replay")]
 for i, (big, sub) in enumerate(rows):
     x = 1.5 + i * 7.9
     shp(x, 4.2, 7.14, 7, fill=P, preset="roundRect")
@@ -69,18 +69,18 @@ data = [("Pérdida de mensajes", "0 %", "0 de 9 990 850"), ("Lag máximo de Data
         ("Bytes por consulta de tablero", "< 1 GB", "≈ 0,2 MB"), ("Costo mensual (sin créditos)", "< US$ 150", "≈ US$ 105")]
 shp(1.5, 5.2, 14, 1, "Indicador", 16, MUT, True); shp(16.5, 5.2, 7, 1, "Meta", 16, MUT, True); shp(24.2, 5.2, 8, 1, "Resultado", 16, MUT, True)
 for i, (a, m, r) in enumerate(data):
-    y = 6.4 + i * 2.1
+    y = 6.4 + i * 2.0
     shp(1.5, y, 30.8, 1.8, fill=LIGHT if i % 2 == 0 else "FFFFFF", preset="rect")
     shp(1.8, y, 14, 1.8, a, 20, valign="middle"); shp(16.5, y, 7, 1.8, m, 20, valign="middle")
     shp(24.2, y, 8, 1.8, r, 22, P, True, valign="middle")
-shp(1.5, 17.0, 30.8, 0.9, "ARIMA_PLUS no supera al promedio simple (36 % vs 20 %): falta historia.", 14, MUT)
+shp(1.5, 16.7, 30.8, 0.9, "ARIMA_PLUS no supera al promedio simple (36 % vs 20 %): falta historia.", 14, MUT)
 footer()
 
 # 5 Productos
 slide(); title("Productos tecnológicos")
 prods = [("Cloud Storage", "Zona raw versionada"), ("Pub/Sub", "Cola de eventos, 7 días"), ("Dataflow + Apache Beam", "Streaming y agregación"),
          ("BigQuery", "Almacén: bronze, silver, gold"), ("BigQuery ML", "ARIMA_PLUS y XGBoost"), ("Cloud Run + FastAPI", "API de exposición"),
-         ("Looker Studio", "Tableros"), ("Dataplex · Secret Manager · Monitoring", "Gobierno y alertas")]
+         ("Looker Studio", "Tableros"), ("Dataplex y Monitoring", "Gobierno y alertas")]
 for i, (a, b) in enumerate(prods):
     c, r = i % 4, i // 4
     x = 1.5 + c * 7.9; y = 4.4 + r * 6.4
@@ -91,7 +91,7 @@ for i, (a, b) in enumerate(prods):
 footer()
 
 # 6 Supuestos
-slide(); title("Dependencias, supuestos y fuera de alcance")
+slide(); title("Dependencias, supuestos y exclusiones")
 cols = [("Dependencias", ["Facturación UTEC y créditos", "Espejo REES46 para dic–abr", "Red de oficina: firewall con inspección SSL"]),
         ("Supuestos", ["Inventario derivado: 50 unidades por semana", "70 M eventos/mes en el año 1", "Precios de lista de GCP"]),
         ("Fuera de alcance", ["Licencia comercial de datos", "Reglas de negocio de producción", "Enmascaramiento dinámico (requiere organización)"])]

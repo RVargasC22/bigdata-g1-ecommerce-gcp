@@ -58,12 +58,12 @@ c = wb.create_sheet("Costo mensual")
 c.append(["Servicio", "Costo mensual (USD)", "Fórmula resumida"])
 items = [
  ("BigQuery consultas", f"=MAX(0,{S['Consultas programadas/mes (TiB escaneados)']}+{S['Consultas de tableros y API (TiB/mes)']}-{P['BigQuery TiB gratis por mes']})*{P['BigQuery consultas bajo demanda']}", "(TiB − 1 gratis) × 6,25"),
- ("BigQuery almacenamiento (promedio año 1)", f"=({S['Almacenamiento inicial']}+{S['Eventos por mes (REES46)']}*{S['Bytes por evento en BigQuery']}/1e9*6)*{P['BigQuery almacenamiento activo']}", "(inicial + crecimiento medio 6 meses) × 0,02"),
+ ("BigQuery almacenamiento (promedio año 1)", f"=({S['Almacenamiento inicial']}+{S['Eventos por mes (REES46)']}*{S['Bytes por evento en BigQuery']}/1000000000*6)*{P['BigQuery almacenamiento activo']}", "(inicial + crecimiento medio 6 meses) × 0,02"),
  ("Cloud Storage", f"={S['Almacenamiento inicial GCS']}*{P['Cloud Storage Standard (us-central1)']}", "GB × 0,02"),
  ("Pub/Sub", f"={S['GB publicados en Pub/Sub por mes']}/1024*{P['Pub/Sub por TiB']}", "TiB × 40"),
  ("Dataflow streaming", f"={S['Horas Dataflow streaming por mes']}*{S['Workers promedio']}*({S['vCPU por worker']}*{P['Dataflow streaming vCPU']}+{S['Memoria por worker']}*{P['Dataflow streaming memoria']})", "h × workers × (vCPU y memoria)"),
  ("Storage Write API (gratis < 2 TiB)", "=0", "35 GB/mes ≪ 2 TiB"),
- ("Cloud Run (API)", f"={S['Peticiones API por mes']}/1e6*{P['Cloud Run peticiones']}+{S['vCPU-segundos Cloud Run por mes']}*{P['Cloud Run vCPU-segundo']}", "peticiones + vCPU·s (sin capa gratuita)"),
+ ("Cloud Run (API)", f"={S['Peticiones API por mes']}/1000000*{P['Cloud Run peticiones']}+{S['vCPU-segundos Cloud Run por mes']}*{P['Cloud Run vCPU-segundo']}", "peticiones + vCPU·s (sin capa gratuita)"),
  ("BigQuery ML (reentrenos, mensual)", f"={S['Entrenamientos BigQuery ML por año']}/12*{S['GB por entrenamiento BQML']}/1024*{P['BigQuery BQML XGBoost']}", "veces/12 × TiB × tarifa BQML"),
  ("Gobierno, monitoreo, secretos", f"={P['Dataplex + Monitoring + Secret Manager']}", "fijo"),
  ("Looker Studio", f"={P['Looker Studio']}", "gratis"),
