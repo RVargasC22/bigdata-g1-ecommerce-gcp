@@ -139,13 +139,14 @@ table(1.5, 3.0, [10.6, 9.4, 5.2, 5.6], [("Paso del Anexo C", "Qué crea", "Terra
     ("4  infra/03_vm.sh · ingest/bq_load.sh", "VM efímera y carga batch", "No: efímero y datos", "shellcheck"),
     ("5  infra/04_fine_grained_access.py", "Taxonomía y policy tags", "Sí", "py_compile"),
     ("6  sql/12 · infra/05_governance.sh", "Row access, linaje y glosario", "No", "shellcheck"),
-    ("7  infra/06_scheduled_queries.sh", "Consultas de 06:00 y 07:00", "No", "dry run sql/14 y 15 *"),
-    ("8  streaming: plantilla y Beam", "Jobs de Dataflow y replays", "No: jobs efímeros", "test UDF y Beam"),
-    ("9  sql/16 · sql/18", "Modelos de BigQuery ML", "No", "—"),
-    ("10 infra/99_teardown.sh", "Apaga lo que cobra por hora", "—", "shellcheck")], 12, 1.15)
-shp(1.5, 15.9, 30.8, 2.0, "Orden limpio: config.env → scripts 1 a 7 → terraform plan (esperado: 0 altas, 0 bajas) → CI en verde → demo → teardown. "
+    ("7  infra/06_scheduled_queries.sh", "Consultas de 06:00 y 07:00", "No", "dry run sql/14 y 15 (main)"),
+    ("8  infra/07_ci_identity.sh", "Identidad del CI (WIF, sa-terraform)", "No", "lo usa el plan (main)"),
+    ("9  streaming: plantilla y Beam", "Jobs de Dataflow y replays", "No: jobs efímeros", "test UDF y Beam"),
+    ("10 sql/16 · sql/18", "Modelos de BigQuery ML", "No", "—"),
+    ("11 infra/99_teardown.sh", "Apaga lo que cobra por hora", "—", "shellcheck")], 12, 1.05)
+shp(1.5, 15.9, 30.8, 2.0, "Orden limpio: config.env → scripts 1 a 8 → terraform plan (esperado: 0 altas, 0 bajas) → CI en verde → demo → teardown. "
     "Terraform adopta 52 recursos persistentes con bloques import; plan del 19 nov: 52 importados, 0 altas, 0 bajas y 6 cambios en sitio (solo etiquetas que GCP ya tiene; el proveedor no las lee al importar). "
-    "* El job de plan y dry run en CI está listo y se activa con Workload Identity Federation; hoy el plan se corre local.", 12, P)
+    "En cada push a main, el CI corre este plan con Workload Identity Federation (cuenta de solo lectura, sin llaves) y falla si quisiera crear o destruir algo.", 12, P)
 footer()
 
 # 8 Beam
