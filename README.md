@@ -198,7 +198,7 @@ Los resultados de cada prueba están en `docs/evidencia/`, y su interpretación,
 - **Zonas horarias.** REES46 ya viene en UTC, y Olist se convierte de `America/Sao_Paulo` a UTC.
 - **Tableros.** Looker Studio solo lee las tablas `agg_*` y `ml_*` y la vista materializada `mv_eventos_hora`. Nunca consulta `events_raw`.
 - **Infraestructura como código.**
-  - `terraform/` adopta con bloques `import` los recursos que crearon los scripts. El `terraform plan` da 49 importados, 0 creados y 0 destruidos (`docs/evidencia/terraform_plan.txt`). El `apply` se hace a mano.
+  - `terraform/` adopta con bloques `import` los recursos que crearon los scripts. El `terraform plan` da 52 importados, 0 creados y 0 destruidos (19 nov 2026) (`docs/evidencia/terraform_plan.txt`). El `apply` se hace a mano.
   - Dejamos fuera, a propósito, las tablas (las crea la capa SQL), el job de Dataflow y la VM (que son efímeros), el valor del secreto, el presupuesto y el glosario.
 - **CI.** En cada push, `.github/workflows/ci.yml` ejecuta `terraform fmt` y `validate`, revisa la sintaxis de shell con `shellcheck`, valida Python y JSON, y prueba la UDF con un evento válido y otro inválido. En `main`, una vez configurado Workload Identity Federation, también corre `terraform plan` y un dry run del SQL.
 

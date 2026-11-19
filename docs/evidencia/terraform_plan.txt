@@ -1,7 +1,9 @@
+# terraform plan, 2026-11-19 (owner credentials, local run)
   # google_bigquery_dataset.ds["ecommerce"] will be updated in-place
   # google_bigquery_dataset.ds["ecommerce_dr"] will be updated in-place
-            display_name = "Error en un run de BigQuery Data Transfer"
+  # google_pubsub_subscription.beam will be updated in-place
   # google_pubsub_subscription.dataflow will be updated in-place
   # google_pubsub_topic.events will be updated in-place
   # google_storage_bucket.raw will be updated in-place
-Plan: 49 to import, 0 to add, 5 to change, 0 to destroy.
+  # Only diff in the 6 updates: adds the label componente = bigquery | pubsub | storage, which the infra/ scripts do not set.
+Plan: 52 to import, 0 to add, 6 to change, 0 to destroy.

@@ -109,7 +109,7 @@ table(1.5, 3.2, [7.6, 12.2, 11], [("Producto", "Rol en la solución", "Por qué"
     ("Cloud Run + FastAPI", "API de exposición, con cuenta sa-api", "Escala a cero; autenticación IAM"),
     ("Looker Studio", "7 páginas; solo lee tablas agg_* y ml_*", "Gratis; caché de 12 h"),
     ("Dataplex, Secret Manager", "Linaje, glosario, secretos", "Gobierno sin código propio"),
-    ("Cloud Monitoring, Terraform, GitHub Actions", "Alertas, IaC (49 recursos), CI", "Operación reproducible")], 13, 1.4)
+    ("Cloud Monitoring, Terraform, GitHub Actions", "Alertas, IaC (52 recursos), CI", "Operación reproducible")], 13, 1.4)
 footer()
 
 # 7 Arquitectura final
@@ -144,7 +144,7 @@ table(1.5, 3.0, [10.6, 9.4, 5.2, 5.6], [("Paso del Anexo C", "Qué crea", "Terra
     ("9  sql/16 · sql/18", "Modelos de BigQuery ML", "No", "—"),
     ("10 infra/99_teardown.sh", "Apaga lo que cobra por hora", "—", "shellcheck")], 12, 1.15)
 shp(1.5, 15.9, 30.8, 2.0, "Orden limpio: config.env → scripts 1 a 7 → terraform plan (esperado: 0 altas, 0 bajas) → CI en verde → demo → teardown. "
-    "Terraform adopta 49 recursos persistentes con bloques import; último plan: 49 importados, 0 altas, 5 cambios en sitio, 0 bajas. "
+    "Terraform adopta 52 recursos persistentes con bloques import; plan del 19 nov: 52 importados, 0 altas, 0 bajas y 6 cambios en sitio (solo la etiqueta «componente»). "
     "* El job de plan y dry run en CI está listo y se activa con Workload Identity Federation; hoy el plan se corre local.", 12, P)
 footer()
 
