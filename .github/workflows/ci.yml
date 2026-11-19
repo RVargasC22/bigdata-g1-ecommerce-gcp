@@ -42,8 +42,9 @@ jobs:
             try { transform(JSON.stringify({event_time: "x", event_type: "hack"})); } catch (e) { threw = true; }
             if (!threw) throw "invalid event accepted";'
 
-  # Runs only once Workload Identity Federation is configured (repository variables WIF_PROVIDER, TERRAFORM_SA,
-  # TF_ALERT_EMAIL, TF_FULL_READERS as a JSON list); until then it is skipped instead of failing.
+  # Runs only once Workload Identity Federation is configured (repository variables WIF_PROVIDER and TERRAFORM_SA;
+  # secrets TF_ALERT_EMAIL and TF_FULL_READERS, the latter as a JSON list); until then it is skipped instead of failing.
+  # The repository is public, so the full plan (it lists real accounts) stays out of the log: only its summary is printed.
   plan:
     if: github.ref == 'refs/heads/main' && vars.WIF_PROVIDER != ''
     needs: checks
@@ -58,17 +59,23 @@ jobs:
           workload_identity_provider: ${{ vars.WIF_PROVIDER }}
           service_account: ${{ vars.TERRAFORM_SA }}
       - uses: hashicorp/setup-terraform@v3
-      - name: Terraform plan (apply stays manual)
+        with:
+          terraform_wrapper: false
+      - name: Terraform plan (apply stays manual; summary only)
         working-directory: terraform
         env:
-          TF_VAR_alert_email: ${{ vars.TF_ALERT_EMAIL }}
-          TF_VAR_full_readers: ${{ vars.TF_FULL_READERS }}
+          TF_VAR_alert_email: ${{ secrets.TF_ALERT_EMAIL }}
+          TF_VAR_full_readers: ${{ secrets.TF_FULL_READERS }}
         run: |
-          terraform init -input=false
-          terraform plan -input=false
+          terraform init -input=false >/dev/null
+          rc=0
+          terraform plan -input=false -no-color -detailed-exitcode > plan.log 2>&1 || rc=$?
+          grep -E '^(Plan:|No changes)' plan.log || true
+          if [ "$rc" = 1 ]; then grep -E '^Error' plan.log; exit 1; fi
+          if grep -qE 'will be (created|destroyed)|must be replaced' plan.log; then echo "Unexpected create/destroy"; exit 1; fi
       - uses: google-github-actions/setup-gcloud@v2
       - name: SQL dry run (syntax + bytes scanned)
         run: |
           for f in sql/14_incremental.sql sql/15_checks.sql; do
-            bq query --use_legacy_sql=false --dry_run < "$f"
+            bq --project_id=bigdata-g1-ecommerce-1105 query --use_legacy_sql=false --dry_run < "$f"
           done
