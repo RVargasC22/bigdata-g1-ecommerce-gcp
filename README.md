@@ -107,6 +107,7 @@ python3 infra/04_fine_grained_access.py   # policy tags sobre user_id y customer
 sql/run.sh sql/12_row_access.sql          # row access policies en fact_pedidos
 ./infra/05_governance.sh                  # Dataplex: linaje + glosario (capas y descripciones: sql/11_governance.sql)
 ./infra/06_scheduled_queries.sh           # 06:00 dedup + refresco incremental (sql/14); 07:00 chequeos ASSERT (sql/15)
+GITHUB_REPO=owner/repo ./infra/07_ci_identity.sh  # identidad sin llaves del CI (WIF + sa-terraform de solo lectura)
 sql/run.sh sql/16_forecast.sql            # pronóstico ARIMA_PLUS por categoría + validación con ene–abr 2020
 sql/run.sh sql/18_forecast_olist.sql      # experimento Olist: ARIMA 17 y 3 meses, XGBoost, TimesFM y promedio
 ```
@@ -200,7 +201,7 @@ Los resultados de cada prueba están en `docs/evidencia/`, y su interpretación,
 - **Infraestructura como código.**
   - `terraform/` adopta con bloques `import` los recursos que crearon los scripts. El `terraform plan` da 52 importados, 0 creados y 0 destruidos (19 nov 2026) (`docs/evidencia/terraform_plan.txt`). El `apply` se hace a mano.
   - Dejamos fuera, a propósito, las tablas (las crea la capa SQL), el job de Dataflow y la VM (que son efímeros), el valor del secreto, el presupuesto y el glosario.
-- **CI.** En cada push, `.github/workflows/ci.yml` ejecuta `terraform fmt` y `validate`, revisa la sintaxis de shell con `shellcheck`, valida Python y JSON, y prueba la UDF con un evento válido y otro inválido. En `main`, una vez configurado Workload Identity Federation, también corre `terraform plan` y un dry run del SQL.
+- **CI.** En cada push, `.github/workflows/ci.yml` ejecuta `terraform fmt` y `validate`, revisa la sintaxis de shell con `shellcheck`, valida Python y JSON, y prueba la UDF con un evento válido y otro inválido. En cada push a `main` también corre `terraform plan` y un dry run del SQL. Se autentica con Workload Identity Federation, sin llaves: la cuenta `sa-terraform` es de solo lectura y solo este repositorio y la rama `main` pueden usarla. Como el repositorio es público, el log muestra solo el resumen del plan, y el job falla si el plan quisiera crear, destruir o reemplazar algo.
 
 ## Looker Studio
 
