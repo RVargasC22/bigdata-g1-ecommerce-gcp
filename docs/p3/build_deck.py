@@ -144,7 +144,7 @@ table(1.5, 3.0, [10.6, 9.4, 5.2, 5.6], [("Paso del Anexo C", "Qué crea", "Terra
     ("9  sql/16 · sql/18", "Modelos de BigQuery ML", "No", "—"),
     ("10 infra/99_teardown.sh", "Apaga lo que cobra por hora", "—", "shellcheck")], 12, 1.15)
 shp(1.5, 15.9, 30.8, 2.0, "Orden limpio: config.env → scripts 1 a 7 → terraform plan (esperado: 0 altas, 0 bajas) → CI en verde → demo → teardown. "
-    "Terraform adopta 52 recursos persistentes con bloques import; plan del 19 nov: 52 importados, 0 altas, 0 bajas y 6 cambios en sitio (solo la etiqueta «componente»). "
+    "Terraform adopta 52 recursos persistentes con bloques import; plan del 19 nov: 52 importados, 0 altas, 0 bajas y 6 cambios en sitio (solo etiquetas que GCP ya tiene; el proveedor no las lee al importar). "
     "* El job de plan y dry run en CI está listo y se activa con Workload Identity Federation; hoy el plan se corre local.", 12, P)
 footer()
 

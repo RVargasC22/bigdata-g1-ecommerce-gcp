@@ -5,5 +5,7 @@
   # google_pubsub_subscription.dataflow will be updated in-place
   # google_pubsub_topic.events will be updated in-place
   # google_storage_bucket.raw will be updated in-place
-  # Only diff in the 6 updates: adds the label componente = bigquery | pubsub | storage, which the infra/ scripts do not set.
+  # Only diff in the 6 updates: labels/terraform_labels gain componente = bigquery | pubsub | storage.
+  # effective_labels (what GCP has, set by infra/01_setup.sh) already contains it: provider 7.46 does not fill
+  # labels on import, so the first apply would only write it to state. No real drift.
 Plan: 52 to import, 0 to add, 6 to change, 0 to destroy.
