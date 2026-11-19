@@ -132,7 +132,7 @@ footer()
 
 # 6 Despliegue: scripts, Terraform y CI (observación 1 de la P2)
 slide(); title("Despliegue: scripts, Terraform y CI")
-table(1.5, 3.0, [10.6, 9.4, 5.2, 5.6], [("Paso del Anexo C", "Qué crea", "Terraform", "CI en cada push"),
+table(1.5, 3.0, [10.6, 9.4, 5.2, 5.6], [("Paso de despliegue", "Qué crea", "Terraform", "CI en cada push"),
     ("1  infra/01_setup.sh", "APIs, bucket, datasets, Pub/Sub, presupuesto", "Sí, salvo presupuesto", "fmt, validate, shellcheck"),
     ("2  infra/02_iam.sh", "Cuentas de servicio, roles, secreto Kaggle", "Sí", "shellcheck"),
     ("3  monitoring/setup_alerts.sh", "Canal de correo y 3 alertas", "Sí", "JSON válido"),
