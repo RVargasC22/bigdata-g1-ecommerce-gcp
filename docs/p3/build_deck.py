@@ -64,6 +64,17 @@ def arrow(a, b):
     ops.append({"command": "add", "parent": f"/slide[{n}]", "type": "connector",
                 "props": {"from": f"/slide[{n}]/shape[@name={a}]", "to": f"/slide[{n}]/shape[@name={b}]", "shape": "straight", "color": TXT, "tailEnd": "triangle"}})
 
+def pill(x, y, w, h, text, fill, size=12, color="FFFFFF", font="Calibri"):
+    shp(x, y, w, h, text, size, color, True, font, fill=fill, preset="roundRect", align="center", valign="middle")
+
+def stat(x, y, w, h, big, sub, fill=P, bs=40):
+    """Big-number tile: hero figure plus a short sublabel."""
+    shp(x, y, w, h, fill=fill, preset="rect")
+    shp(x, y + .4, w, 2.4, big, bs, "FFFFFF", True, "Georgia", align="center", valign="middle")
+    shp(x + .3, y + 2.9, w - .6, h - 3.1, sub, 14, "E6EEF4", align="center")
+
+GREEN = "3A8D5C"
+
 def node(x, y, w, h, head, sub, fill, name, hs=17):
     """Diagram box: bold header plus a short subtitle."""
     shp(x, y, w, h, fill=fill, preset="roundRect", name=name)
@@ -112,30 +123,41 @@ footer()
 
 # 4 KPIs
 slide(); title("Criterios de éxito en formato KPI")
-table(1.5, 3.2, [9.6, 5.2, 5.2, 10.8], [("Indicador", "Meta", "Medido", "Evidencia"),
-    ("Pérdida de mensajes en replay", "0 %", "0 de 9 990 850", "docs/evidencia/replays.log"),
-    ("Lag máximo del sistema (Dataflow)", "≤ 60 s", "7 s", "metricas_pico.csv"),
-    ("Conciliación stream vs batch", "100 %", "379 de 379", "beam_conciliacion.txt"),
-    ("Mensajes inválidos a la cola de errores", "100 %", "3 de 3 por tipo", "events_deadletter"),
-    ("Bytes por consulta de tablero", "< 1 GB", "≈ 0,2 MB", "sql/09_bytes_scanned.sh"),
-    ("Costo mensual a precio de lista", "< US$ 150", "≈ US$ 105", "calculadora_consumo.xlsx"),
-    ("Intervalo de pronóstico de 90 %", "≈ 90 %", "93,5 % cubierto", "ml_resumen_pronostico"),
-    ("Error del pronóstico vs promedio simple", "menor", "36 % vs 20 %", "no cumple: falta historia")], 14, 1.4)
-shp(1.5, 16.3, 30.8, 1.4, "Las metas de lag, bytes y costo las fijamos para P3. El pronóstico no cumple y lo reportamos así: se necesita al menos un año de historia.", 13, MUT)
+kpis = [("Pérdida de mensajes en replay", "0 %", "0 de 9 990 850", "docs/evidencia/replays.log", True),
+    ("Lag máximo del sistema (Dataflow)", "≤ 60 s", "7 s", "metricas_pico.csv", True),
+    ("Conciliación stream vs batch", "100 %", "379 de 379", "beam_conciliacion.txt", True),
+    ("Mensajes inválidos a la cola de errores", "100 %", "3 de 3 por tipo", "events_deadletter", True),
+    ("Bytes por consulta de tablero", "< 1 GB", "≈ 0,2 MB", "sql/09_bytes_scanned.sh", True),
+    ("Costo mensual a precio de lista", "< US$ 150", "≈ US$ 105", "calculadora_consumo.xlsx", True),
+    ("Intervalo de pronóstico de 90 %", "≈ 90 %", "93,5 % cubierto", "ml_resumen_pronostico", True),
+    ("Error del pronóstico vs promedio simple", "menor", "36 % vs 20 %", "falta un año de historia", False)]
+table(1.5, 3.2, [9.6, 4.4, 5.0, 8.4, 3.4], [("Indicador", "Meta", "Medido", "Evidencia", "Estado")] + [(k[0], k[1], "", k[3], "") for k in kpis], 14, 1.4)
+for i, k in enumerate(kpis):
+    yy = 3.2 + (i + 1) * 1.4
+    shp(15.7, yy, 4.7, 1.4, k[2], 14, GREEN if k[4] else "B5532F", True, valign="middle")
+    pill(29.1, yy + .3, 3.0, .8, "Cumple" if k[4] else "No cumple", GREEN if k[4] else A, 11)
+shp(1.5, 16.3, 30.8, 1.4, "7 de 8 metas cumplidas. Las metas de lag, bytes y costo las fijamos para P3. El pronóstico no cumple y lo reportamos así: se necesita al menos un año de historia.", 13, MUT)
 footer()
 
 # 5 Productos
 slide(); title("Productos tecnológicos a usar")
-table(1.5, 3.2, [7.6, 12.2, 11], [("Producto", "Rol en la solución", "Por qué"),
-    ("Cloud Storage", "Zona raw versionada, replays, lookup de Beam", "Barato y duradero; ciclo de vida"),
-    ("Pub/Sub", "Cola de eventos, retención 7 días, 2 suscripciones", "Absorbe picos; entrega al menos una vez"),
-    ("Dataflow + Apache Beam", "Plantilla con UDF y pipeline propio en streaming", "Autoescala de 1 a 2 workers"),
-    ("BigQuery", "Almacén bronze, silver y gold; vista materializada", "Sin servidores; cobro por uso"),
-    ("BigQuery ML", "ARIMA_PLUS, XGBoost y TimesFM", "Modelos en SQL, sin mover datos"),
-    ("Cloud Run + FastAPI", "API de exposición, con cuenta sa-api", "Escala a cero; autenticación IAM"),
-    ("Looker Studio", "7 páginas; solo lee tablas agg_* y ml_*", "Gratis; caché de 12 h"),
-    ("Dataplex, Secret Manager", "Linaje, glosario, secretos", "Gobierno sin código propio"),
-    ("Cloud Monitoring, Terraform, GitHub Actions", "Alertas, IaC (52 recursos), CI", "Operación reproducible")], 13, 1.4)
+prods = [("Cloud Storage", "INGESTA", P, "Zona raw versionada, replays, lookup de Beam", "Barato y duradero; ciclo de vida"),
+    ("Pub/Sub", "INGESTA", P, "Cola de eventos, retención 7 días, 2 suscripciones", "Absorbe picos; entrega al menos una vez"),
+    ("Dataflow + Beam", "PROCESO", S, "Plantilla con UDF y pipeline propio en streaming", "Autoescala de 1 a 2 workers"),
+    ("BigQuery", "ALMACÉN", TXT, "Bronze, silver y gold; vista materializada", "Sin servidores; cobro por uso"),
+    ("BigQuery ML", "ALMACÉN", TXT, "ARIMA_PLUS, XGBoost y TimesFM", "Modelos en SQL, sin mover datos"),
+    ("Cloud Run + FastAPI", "CONSUMO", A, "API de exposición, con cuenta sa-api", "Escala a cero; autenticación IAM"),
+    ("Looker Studio", "CONSUMO", A, "7 páginas; solo lee tablas agg_* y ml_*", "Gratis; caché de 12 h"),
+    ("Dataplex · Secret Manager", "GOBIERNO", MUT, "Linaje, glosario y secretos", "Gobierno sin código propio"),
+    ("Monitoring · Terraform · CI", "OPERACIÓN", MUT, "Alertas, IaC (52 recursos), GitHub Actions", "Operación reproducible")]
+for i, (name, layer, col, role, why) in enumerate(prods):
+    x, y = 1.5 + (i % 3) * 10.54, 3.1 + (i // 3) * 5.0
+    shp(x, y, 9.78, 4.6, fill=LIGHT, preset="rect")
+    shp(x, y, 9.78, 1.4, fill=col, preset="rect")
+    shp(x + .35, y, 9.1, 1.4, name, 16, "FFFFFF", True, "Georgia", valign="middle")
+    shp(x + .35, y + 1.5, 9.1, .6, layer, 10, col, True)
+    shp(x + .35, y + 2.0, 9.1, 1.4, role, 14, TXT, True)
+    shp(x + .35, y + 3.25, 9.1, 1.3, "Por qué: " + why, 13, MUT)
 footer()
 
 # 6 Dependencias
@@ -215,13 +237,19 @@ footer()
 
 # 9 API
 slide(); title("Capa de exposición: API sobre BigQuery")
-table(1.5, 3.2, [10, 21], [("Endpoint", "Qué devuelve"),
-    ("GET /ventas/diarias", "Compras e ingresos por día y categoría (agg_embudo_categoria_dia)"),
-    ("GET /embudo/{categoria}", "Sesiones view, cart y purchase, y tasa de conversión"),
-    ("GET /pronostico", "Serie real, pronóstico ARIMA_PLUS e intervalo, y referencia"),
-    ("GET /pronostico/resumen", "Error del modelo frente al promedio de referencia"),
-    ("GET /stream/minuto", "Últimos minutos agregados por el pipeline Beam"),
-    ("GET /health", "Estado del servicio")], 14, 1.35)
+eps = [("/ventas/diarias", "Compras e ingresos por día y categoría (agg_embudo_categoria_dia)"),
+    ("/embudo/{categoria}", "Sesiones view, cart y purchase, y tasa de conversión"),
+    ("/pronostico", "Serie real, pronóstico ARIMA_PLUS e intervalo, y referencia"),
+    ("/pronostico/resumen", "Error del modelo frente al promedio de referencia"),
+    ("/stream/minuto", "Últimos minutos agregados por el pipeline Beam"),
+    ("/health", "Estado del servicio")]
+for i, (path, desc) in enumerate(eps):
+    yy = 3.2 + i * 1.5
+    shp(1.5, yy, 30.8, 1.3, fill=LIGHT, preset="rect")
+    shp(1.5, yy, .2, 1.3, fill=S, preset="rect")
+    pill(2.1, yy + .25, 1.7, .8, "GET", GREEN, 12, font="Consolas")
+    shp(4.1, yy, 8.4, 1.3, path, 15, P, True, "Consolas", valign="middle")
+    shp(12.6, yy, 19.5, 1.3, desc, 14, TXT, valign="middle")
 card(1.5, 12.9, 15, 4.9, "Diseño y seguridad", ["FastAPI en Cloud Run, cuenta sa-api con jobUser y dataViewer", "Privada: exige token de identidad; sin token, 403",
     "Consultas parametrizadas; tope de 10 GB facturados; máx. 2 instancias"], 13)
 shp(17.0, 12.9, 15.3, 4.9, fill="2B3A4E", preset="rect")
@@ -271,13 +299,20 @@ footer()
 
 # 15 Next steps
 slide(); title("Next Steps")
-table(1.5, 3.4, [1.8, 17, 12], [("#", "Acción", "Beneficio"),
-    ("1", "Licencia comercial de datos y fuente en producción", "Uso real fuera del curso"),
-    ("2", "Reducir Dataflow: autoscaling y ventanas más cortas", "Baja el 56 % del costo"),
-    ("3", "Reentrenar con un año de historia y XGBoost", "Supera la referencia"),
-    ("4", "Autenticación y cuotas por cliente en la API", "Acceso a terceros"),
-    ("5", "Aplicar Terraform y montar CI/CD de despliegue", "Reproducible sin pasos manuales"),
-    ("6", "Enmascaramiento dinámico con una organización GCP", "Gobierno de datos completo")], 15, 1.9)
+nxt = [("Licencia comercial de datos y fuente en producción", "Uso real fuera del curso", True),
+    ("Reducir Dataflow: autoscaling y ventanas más cortas", "Baja el 56 % del costo", False),
+    ("Reentrenar con un año de historia y XGBoost", "Supera la referencia", True),
+    ("Autenticación y cuotas por cliente en la API", "Acceso a terceros", False),
+    ("Aplicar Terraform y montar CI/CD de despliegue", "Reproducible sin pasos manuales", False),
+    ("Enmascaramiento dinámico con una organización GCP", "Gobierno de datos completo", False)]
+for i, (act, ben, prio) in enumerate(nxt):
+    x, y = 1.5 + (i % 3) * 10.54, 3.3 + (i // 3) * 7.2
+    shp(x, y, 9.78, 6.6, fill=LIGHT, preset="rect")
+    shp(x + .5, y + .5, 1.8, 1.8, str(i + 1), 22, "FFFFFF", True, "Georgia", fill=A if prio else P, preset="ellipse", align="center", valign="middle")
+    if prio:
+        pill(x + 6.3, y + .9, 3.0, .9, "Prioridad", A, 12)
+    shp(x + .5, y + 2.7, 8.8, 2.3, act, 18, TXT, True)
+    shp(x + .5, y + 5.1, 8.8, 1.1, ben, 15, S, True)
 footer()
 
 # Separador: diapositivas de respaldo para las preguntas
@@ -286,19 +321,22 @@ shp(3, 7.5, 28, 3, "Respaldo para preguntas", 40, "FFFFFF", True, "Georgia", val
 
 # 8 Beam
 slide(); title("Pipeline en tiempo real (Beam)")
-pic("06_df_grafo_beam", 1.5, 3.0, 10.4, 8.45, "Grafo del job Beam en Dataflow")
-pic("06_stream_minuto", 1.5, 11.8, 10.4, 6.5, "Tabla stream_categoria_minuto en BigQuery") if False else None
-bullets(12.6, 3.2, 19.7, 14.4, [
-    "Lee de su propia suscripción (rees46-events-beam), en paralelo al job de la plantilla",
-    "Valida: formato de fecha, event_type, product_id entero, precio no negativo",
-    "Enriquece cada evento con su categoría común (side input de 386 299 productos desde Cloud Storage)",
-    "Agrega por minuto y categoría en ventanas de 1 minuto con disparo a tiempo y tardío (10 min)",
-    "Escribe en stream_categoria_minuto con streaming inserts (la plantilla usa Storage Write API)",
-    "Inválidos van a events_deadletter con su motivo, sin detener el flujo",
-    "Ventanas por hora de llegada (marca de Pub/Sub): por hora del evento, el watermark descartaría 2019",
-    "Resultado: 227 830 eventos, 379 de 379 combinaciones iguales al batch, al centavo",
-    "Con 1 worker y a 10x, cada minuto se escribe 3–4 min después de cerrar (p50 189 s)",
-    "Prueba local en CI: streaming/beam/test_pipeline.py"], 15)
+flow = [("Pub/Sub", "rees46-events-beam\nsuscripción propia", P), ("Validar", "fecha, event_type,\nproduct_id, precio", S),
+        ("Enriquecer", "categoría común\n(side input)", S), ("Ventana 1 min", "minuto × categoría\ntardío: 10 min", S),
+        ("BigQuery", "stream_categoria_minuto\nstreaming inserts", TXT)]
+for i, (h_, sub, col) in enumerate(flow):
+    node(1.5 + i * 6.37, 3.2, 5.4, 3.6, h_, sub, col, f"B{i}", 16)
+node(7.87, 8.0, 5.4, 2.8, "Cola de errores", "events_deadletter\ncon su motivo", A, "DL", 15)
+node(14.24, 8.0, 5.4, 2.8, "Cloud Storage", "386 299 productos", MUT, "GCS", 15)
+for i in range(4):
+    arrow(f"B{i}", f"B{i+1}")
+arrow("B1", "DL"); arrow("GCS", "B2")
+shp(1.5, 8.0, 5.4, 2.8, "En paralelo al job de la plantilla, sin compartir suscripción", 13, TXT, fill=LIGHT, preset="rect", align="center", valign="middle")
+shp(20.61, 8.0, 11.76, 2.8, "Ventanas por hora de llegada (marca de Pub/Sub): por hora del evento, el watermark descartaría los eventos de 2019", 14, TXT, fill=LIGHT, preset="rect", valign="middle")
+for i, (big, sub, col) in enumerate([("227 830", "eventos procesados en el ensayo", P), ("379/379", "combinaciones iguales al batch, al centavo", GREEN),
+                                     ("189 s", "p50 de escritura tras cerrar el minuto (1 worker, 10x)", S), ("3 de 3", "inválidos por tipo a la cola de errores", A)]):
+    stat(1.5 + i * 7.91, 11.5, 7.15, 4.9, big, sub, col, 34)
+shp(1.5, 16.7, 30.8, .9, "Código: streaming/beam/pipeline.py · prueba local en CI: streaming/beam/test_pipeline.py (DirectRunner)", 12, MUT)
 footer()
 
 # 11 Supuestos y escenarios
@@ -313,13 +351,21 @@ footer()
 
 # 13 Resultados
 slide(); title("Resultados y hallazgos medidos")
-card(1.5, 3.2, 15, 7.2, "Tráfico y streaming", ["Pico real el 15–17 nov 2019, no en Black Friday", "3 replays: 9 990 850 mensajes, ninguno perdido", "Dataflow escala de 1 a 2 workers, lag máximo 7 s"], 16)
-card(17.3, 3.2, 15, 7.2, "Calidad de datos", ["21 696 eventos repetidos eliminados", "Diciembre trae otra taxonomía: 76 % de las compras con categoría contradictoria", "Corregido por producto; control automático de saltos > 4x"], 16, hfill=S)
-card(1.5, 10.9, 15, 7.0, "Pronóstico (honesto)", ["ARIMA_PLUS: error 36 % vs 20 % del promedio simple en ene–feb", "Intervalo de 90 % cubre el 93,5 % de los días", "Olist, con 17 meses: XGBoost 32 % vs 31 % del promedio"], 16, hfill=MUT)
-card(17.3, 10.9, 15, 7.0, "Gobierno y seguridad", ["Policy tags en user_id; el analista restringido solo ve «muebles»", "Cola de errores, linaje y glosario en Dataplex", "Tres alertas por correo y consultas con ASSERT"], 16)
+res = [("Tráfico y streaming", P, "5,5x", "Pico real el 17/11/2019, no en Black Friday (1,6x)\n3 replays: 9 990 850 mensajes, 0 perdidos; lag máx. 7 s"),
+       ("Calidad de datos", S, "21 696", "eventos repetidos eliminados\nDiciembre: 76 % de compras con categoría contradictoria, corregido por producto"),
+       ("Pronóstico (honesto)", MUT, "36 % vs 20 %", "ARIMA_PLUS vs promedio simple en ene–feb; intervalo de 90 % cubre el 93,5 %\nOlist (17 meses): XGBoost 32 % vs 31 %"),
+       ("Gobierno y seguridad", P, "4 de 4", "observaciones del profesor en P1: cuentas y secretos, Dataplex, cola de errores, policy tags\nAnalista restringido: sin user_id, solo ve «muebles»")]
+for i, (head, col, big, t) in enumerate(res):
+    x, y = 1.5 + (i % 2) * 15.8, 3.2 + (i // 2) * 7.5
+    shp(x, y, 15, 7.0, fill=LIGHT, preset="rect")
+    shp(x, y, 15, 1.4, head, 17, "FFFFFF", True, "Georgia", fill=col, valign="middle", align="center")
+    shp(x + .5, y + 1.7, 14, 2.0, big, 36, col, True, "Georgia", valign="middle")
+    shp(x + .5, y + 3.8, 14, 3.0, t, 14, TXT)
 footer()
 
 subprocess.run(["officecli", "create", OUT], check=True)
+ops.append({"command": "set", "path": "/", "props": {"title": "Plataforma eCommerce en Google Cloud - Sustentación P3",
+            "author": "Grupo 1 - Big Data UTEC", "lastModifiedBy": "Grupo 1 - Big Data UTEC"}})
 with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
     json.dump([o for o in ops if o], f)
 r = subprocess.run(["officecli", "batch", OUT, "--input", f.name], capture_output=True, text=True)
