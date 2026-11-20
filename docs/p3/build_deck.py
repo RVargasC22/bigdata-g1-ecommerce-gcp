@@ -84,6 +84,21 @@ card(22.5, 3.2, 9.9, 14.2, "Qué entregamos en P3", [
     "Documento de sustentación v3 (98 páginas) de la parte 2"])
 footer()
 
+# 3 Situación actual
+slide(); title("Situación actual")
+for i, (big, sub) in enumerate([("410M", "eventos en events_raw"), ("99 470", "pedidos Olist"), ("5,5x", "pico del 17/11/2019"), ("0", "mensajes perdidos de 9,99 M")]):
+    x = 1.5 + i * 7.9
+    shp(x, 3.2, 7.14, 4.6, fill=P, preset="rect")
+    shp(x, 3.5, 7.14, 2.4, big, 44, "FFFFFF", True, "Georgia", align="center", valign="middle")
+    shp(x + .2, 6.1, 6.74, 1.5, sub, 15, "CADCFC", align="center")
+table(1.5, 8.4, [9, 21.8], [("Componente", "Estado"),
+    ("Ingesta y almacenamiento", "Batch y streaming operativos; 410 M eventos; DR con snapshots y simulacro"),
+    ("Transformación", "Silver y gold en BigQuery; Beam en Dataflow concilia 379 de 379 contra batch"),
+    ("Calidad", "Deduplicación (21 696 filas) y chequeos ASSERT diarios; taxonomía de diciembre corregida"),
+    ("Analítica", "Tablero de 7 páginas; pronóstico ARIMA_PLUS y XGBoost con validación contra datos reales"),
+    ("Operación", "Consultas programadas en pausa desde el 6 de nov; se reactivan para la demo")], 14, 1.45)
+footer()
+
 # 4 KPIs
 slide(); title("Criterios de éxito en formato KPI")
 table(1.5, 3.2, [9.6, 5.2, 5.2, 10.8], [("Indicador", "Meta", "Medido", "Evidencia"),
@@ -110,6 +125,19 @@ table(1.5, 3.2, [7.6, 12.2, 11], [("Producto", "Rol en la solución", "Por qué"
     ("Looker Studio", "7 páginas; solo lee tablas agg_* y ml_*", "Gratis; caché de 12 h"),
     ("Dataplex, Secret Manager", "Linaje, glosario, secretos", "Gobierno sin código propio"),
     ("Cloud Monitoring, Terraform, GitHub Actions", "Alertas, IaC (52 recursos), CI", "Operación reproducible")], 13, 1.4)
+footer()
+
+# 6 Dependencias
+slide(); title("Dependencias, supuestos y fuera de scope")
+card(1.5, 3.2, 9.9, 14.2, "Dependencias", [
+    "Facturación de UTEC y créditos de GCP", "Espejo de REES46 (data.rees46.com) para dic–abr", "Token de Kaggle en Secret Manager para oct–nov",
+    "Red de oficina con inspección SSL: SSH solo por IAP, gRPC bloqueado", "Cuenta owner en gmail, porque la organización UTEC bloquea crear proyectos"])
+card(12.0, 3.2, 9.9, 14.2, "Supuestos", [
+    "Inventario derivado: 50 unidades por producto, se repone cada lunes", "70 M eventos al mes durante el año 1", "Streaming en ventanas pico (≈ 120 h al mes), no 24x7",
+    "Precios de lista de GCP, sin descuentos", "REES46 y Olist no son la misma tienda: el cruce es por categoría"], hfill=S)
+card(22.5, 3.2, 9.9, 14.2, "Fuera de scope", [
+    "Licencia comercial de los datos", "Reglas de negocio y datos de producción", "Enmascaramiento dinámico (exige organización GCP); solo hay denegación de columna",
+    "Aplicar Terraform: solo plan, nunca apply", "Alta disponibilidad multirregión"], hfill=MUT)
 footer()
 
 # 7 Arquitectura final
@@ -149,23 +177,6 @@ shp(1.5, 15.9, 30.8, 2.0, "Orden limpio: config.env → scripts 1 a 8 → terraf
     "En cada push a main, el CI corre este plan con Workload Identity Federation (cuenta de solo lectura, sin llaves) y falla si quisiera crear o destruir algo.", 12, P)
 footer()
 
-# 8 Beam
-slide(); title("Pipeline en tiempo real (Beam)")
-pic("06_df_grafo_beam", 1.5, 3.0, 10.4, 8.45, "Grafo del job Beam en Dataflow")
-pic("06_stream_minuto", 1.5, 11.8, 10.4, 6.5, "Tabla stream_categoria_minuto en BigQuery") if False else None
-bullets(12.6, 3.2, 19.7, 14.4, [
-    "Lee de su propia suscripción (rees46-events-beam), en paralelo al job de la plantilla",
-    "Valida: formato de fecha, event_type, product_id entero, precio no negativo",
-    "Enriquece cada evento con su categoría común (side input de 386 299 productos desde Cloud Storage)",
-    "Agrega por minuto y categoría en ventanas de 1 minuto con disparo a tiempo y tardío (10 min)",
-    "Escribe en stream_categoria_minuto con streaming inserts (la plantilla usa Storage Write API)",
-    "Inválidos van a events_deadletter con su motivo, sin detener el flujo",
-    "Ventanas por hora de llegada (marca de Pub/Sub): por hora del evento, el watermark descartaría 2019",
-    "Resultado: 227 830 eventos, 379 de 379 combinaciones iguales al batch, al centavo",
-    "Con 1 worker y a 10x, cada minuto se escribe 3–4 min después de cerrar (p50 189 s)",
-    "Prueba local en CI: streaming/beam/test_pipeline.py"], 15)
-footer()
-
 # 8 Casos borde (observación 2 de la P2)
 slide(); title("Casos borde: duplicados y conciliación")
 card(1.5, 3.0, 10.2, 7.6, "Por qué aparecen", [
@@ -202,8 +213,17 @@ shp(17.0, 12.9, 15.3, 4.9, fill="2B3A4E", preset="rect")
 shp(17.3, 13.1, 14.8, 4.5, "$ curl -H \"Authorization: Bearer $TOKEN\" $URL/embudo/electronica\n{\"view\":6343679,\"cart\":873356,\n \"purchase\":434872,\"conversion_pct\":6.86}", 13, "FFFFFF", font="Consolas")
 footer()
 
+# 10 Calculadora
+slide(); title("Calculadora de consumo: año 1")
+ops.append({"command": "add", "parent": f"/slide[{n}]", "type": "chart", "props": {"chartType": "bar", "series1.name": "USD por mes", "series1.values": "59.3,15.0,12.4,7.6,6.3,3.2,1.8", "series1.color": P,
+            "categories": "Dataflow,Gobierno y monitoreo,BigQuery ML,Cloud Run,BigQuery consultas,BigQuery storage,GCS y Pub/Sub", "x": "1.5cm", "y": "3.1cm", "width": "14.5cm", "height": "11cm"}})
+table(16.6, 3.2, [9.5, 3.4, 2.8], [("Servicio", "USD/mes", "%"), ("Dataflow streaming", "59,28", "56"), ("Gobierno y monitoreo", "15,00", "14"), ("BigQuery ML", "12,40", "12"),
+    ("Cloud Run", "7,60", "7"), ("BigQuery consultas", "6,25", "6"), ("BigQuery storage", "3,15", "3"), ("Pub/Sub y GCS", "1,76", "2"), ("Total mensual", "105,45", "100")], 13, 1.3)
+shp(1.5, 15.3, 31, 2.6, "Total del primer año: US$ 1 265 a precio de lista, sin capas gratuitas ni créditos. Referencia real: la facturación del 1 al 6 de nov fue S/ 8,75 bruto, cubierta por créditos. Archivo: docs/p3/calculadora_consumo.xlsx, con supuestos editables.", 15, P, True)
+footer()
+
 # 12 Demo
-slide(); title("Demo end-to-end en vivo")
+slide(); title("Demo end-to-end: ventas en tiempo real")
 steps = ["1 Replay a Pub/Sub", "2 Dataflow procesa", "3 Escribe en BigQuery", "4 La API responde", "5 Looker muestra"]
 for i, s_ in enumerate(steps):
     x = 1.5 + i * 6.3
@@ -215,15 +235,6 @@ table(1.5, 6.1, [6.6, 4.9, 4.9], [("Ensayo 17 nov", "Stream", "Batch"), ("Evento
 pic("06_stream_minuto", 18.3, 6.1, 14.0, 8.75, "Tabla stream_categoria_minuto en BigQuery")
 card(1.5, 12.9, 16, 5.0, "Qué se ve en vivo", ["Job de Dataflow en Running y su grafo", "Replay a 10x de 30 min del peak, 180 s, 0 fallos", "Conciliación en SQL y consulta a la API con token"], 13, hfill=S)
 shp(18.3, 15.4, 14.0, 2.4, "Plan B: grabación del replay y API local si falla la red de oficina.", 14, MUT)
-footer()
-
-# 10 Calculadora
-slide(); title("Calculadora de consumo: año 1")
-ops.append({"command": "add", "parent": f"/slide[{n}]", "type": "chart", "props": {"chartType": "bar", "series1.name": "USD por mes", "series1.values": "59.3,15.0,12.4,7.6,6.3,3.2,1.8", "series1.color": P,
-            "categories": "Dataflow,Gobierno y monitoreo,BigQuery ML,Cloud Run,BigQuery consultas,BigQuery storage,GCS y Pub/Sub", "x": "1.5cm", "y": "3.1cm", "width": "14.5cm", "height": "11cm"}})
-table(16.6, 3.2, [9.5, 3.4, 2.8], [("Servicio", "USD/mes", "%"), ("Dataflow streaming", "59,28", "56"), ("Gobierno y monitoreo", "15,00", "14"), ("BigQuery ML", "12,40", "12"),
-    ("Cloud Run", "7,60", "7"), ("BigQuery consultas", "6,25", "6"), ("BigQuery storage", "3,15", "3"), ("Pub/Sub y GCS", "1,76", "2"), ("Total mensual", "105,45", "100")], 13, 1.3)
-shp(1.5, 15.3, 31, 2.6, "Total del primer año: US$ 1 265 a precio de lista, sin capas gratuitas ni créditos. Referencia real: la facturación del 1 al 6 de nov fue S/ 8,75 bruto, cubierta por créditos. Archivo: docs/p3/calculadora_consumo.xlsx, con supuestos editables.", 15, P, True)
 footer()
 
 # 14 Conclusiones
@@ -253,32 +264,21 @@ footer()
 slide(P)
 shp(3, 7.5, 28, 3, "Respaldo para preguntas", 40, "FFFFFF", True, "Georgia", valign="middle")
 
-# 3 Situación actual
-slide(); title("Situación actual")
-for i, (big, sub) in enumerate([("410M", "eventos en events_raw"), ("99 470", "pedidos Olist"), ("5,5x", "pico del 17/11/2019"), ("0", "mensajes perdidos de 9,99 M")]):
-    x = 1.5 + i * 7.9
-    shp(x, 3.2, 7.14, 4.6, fill=P, preset="rect")
-    shp(x, 3.5, 7.14, 2.4, big, 44, "FFFFFF", True, "Georgia", align="center", valign="middle")
-    shp(x + .2, 6.1, 6.74, 1.5, sub, 15, "CADCFC", align="center")
-table(1.5, 8.4, [9, 21.8], [("Componente", "Estado"),
-    ("Ingesta y almacenamiento", "Batch y streaming operativos; 410 M eventos; DR con snapshots y simulacro"),
-    ("Transformación", "Silver y gold en BigQuery; Beam en Dataflow concilia 379 de 379 contra batch"),
-    ("Calidad", "Deduplicación (21 696 filas) y chequeos ASSERT diarios; taxonomía de diciembre corregida"),
-    ("Analítica", "Tablero de 7 páginas; pronóstico ARIMA_PLUS y XGBoost con validación contra datos reales"),
-    ("Operación", "Consultas programadas en pausa desde el 6 de nov; se reactivan para la demo")], 14, 1.45)
-footer()
-
-# 6 Dependencias
-slide(); title("Dependencias, supuestos y fuera de scope")
-card(1.5, 3.2, 9.9, 14.2, "Dependencias", [
-    "Facturación de UTEC y créditos de GCP", "Espejo de REES46 (data.rees46.com) para dic–abr", "Token de Kaggle en Secret Manager para oct–nov",
-    "Red de oficina con inspección SSL: SSH solo por IAP, gRPC bloqueado", "Cuenta owner en gmail, porque la organización UTEC bloquea crear proyectos"])
-card(12.0, 3.2, 9.9, 14.2, "Supuestos", [
-    "Inventario derivado: 50 unidades por producto, se repone cada lunes", "70 M eventos al mes durante el año 1", "Streaming en ventanas pico (≈ 120 h al mes), no 24x7",
-    "Precios de lista de GCP, sin descuentos", "REES46 y Olist no son la misma tienda: el cruce es por categoría"], hfill=S)
-card(22.5, 3.2, 9.9, 14.2, "Fuera de scope", [
-    "Licencia comercial de los datos", "Reglas de negocio y datos de producción", "Enmascaramiento dinámico (exige organización GCP); solo hay denegación de columna",
-    "Aplicar Terraform: solo plan, nunca apply", "Alta disponibilidad multirregión"], hfill=MUT)
+# 8 Beam
+slide(); title("Pipeline en tiempo real (Beam)")
+pic("06_df_grafo_beam", 1.5, 3.0, 10.4, 8.45, "Grafo del job Beam en Dataflow")
+pic("06_stream_minuto", 1.5, 11.8, 10.4, 6.5, "Tabla stream_categoria_minuto en BigQuery") if False else None
+bullets(12.6, 3.2, 19.7, 14.4, [
+    "Lee de su propia suscripción (rees46-events-beam), en paralelo al job de la plantilla",
+    "Valida: formato de fecha, event_type, product_id entero, precio no negativo",
+    "Enriquece cada evento con su categoría común (side input de 386 299 productos desde Cloud Storage)",
+    "Agrega por minuto y categoría en ventanas de 1 minuto con disparo a tiempo y tardío (10 min)",
+    "Escribe en stream_categoria_minuto con streaming inserts (la plantilla usa Storage Write API)",
+    "Inválidos van a events_deadletter con su motivo, sin detener el flujo",
+    "Ventanas por hora de llegada (marca de Pub/Sub): por hora del evento, el watermark descartaría 2019",
+    "Resultado: 227 830 eventos, 379 de 379 combinaciones iguales al batch, al centavo",
+    "Con 1 worker y a 10x, cada minuto se escribe 3–4 min después de cerrar (p50 189 s)",
+    "Prueba local en CI: streaming/beam/test_pipeline.py"], 15)
 footer()
 
 # 11 Supuestos y escenarios
