@@ -52,13 +52,23 @@ def table(x, y, cw, rows, size=14, rh=1.25, head=True):
             shp(cx + .2, yy, cw[j] - .3, rh, c, size, "FFFFFF" if hd else TXT, hd or j == 0, valign="middle")
             cx += cw[j]
 
-def bullets(x, y, w, h, items, size=15):
-    shp(x, y, w, h, "\n".join("• " + i for i in items), size)
+def bullets(x, y, w, h, items, size=15, sep="\n"):
+    shp(x, y, w, h, sep.join("• " + i for i in items), size)
 
-def card(x, y, w, h, head, items, size=14, fill=LIGHT, hfill=P):
+def card(x, y, w, h, head, items, size=14, fill=LIGHT, hfill=P, sep="\n"):
     shp(x, y, w, h, fill=fill, preset="rect")
     shp(x, y, w, 1.5, head, 17, "FFFFFF", True, "Georgia", fill=hfill, valign="middle", align="center")
-    bullets(x + .3, y + 1.8, w - .6, h - 2.0, items, size)
+    bullets(x + .3, y + 1.8, w - .6, h - 2.0, items, size, sep)
+
+def arrow(a, b):
+    ops.append({"command": "add", "parent": f"/slide[{n}]", "type": "connector",
+                "props": {"from": f"/slide[{n}]/shape[@name={a}]", "to": f"/slide[{n}]/shape[@name={b}]", "shape": "straight", "color": TXT, "tailEnd": "triangle"}})
+
+def node(x, y, w, h, head, sub, fill, name, hs=17):
+    """Diagram box: bold header plus a short subtitle."""
+    shp(x, y, w, h, fill=fill, preset="roundRect", name=name)
+    shp(x + .1, y + .3, w - .2, 1.2, head, hs, "FFFFFF", True, "Georgia", align="center", valign="middle")
+    shp(x + .2, y + 1.5, w - .4, h - 1.6, sub, 13, "FFFFFF", align="center")
 
 # 1 Portada
 slide(P)
@@ -71,18 +81,18 @@ shp(3, 15.8, 28, 1.2, "Repositorio: github.com/RVargasC22/bigdata-g1-ecommerce-g
 
 # 2 Resumen ejecutivo
 slide(); title("Resumen ejecutivo y alcance")
-card(1.5, 3.2, 9.9, 14.2, "Qué se implementó", [
-    "Ingesta batch (Cloud Storage, bq load) y streaming (Pub/Sub, Dataflow)", "Capas bronze, silver y gold en BigQuery",
-    "Pipeline Apache Beam propio: valida, enriquece y agrega por minuto y categoría", "Pronóstico de demanda con BigQuery ML",
-    "Tablero de 7 páginas en Looker Studio", "API de exposición en Cloud Run (P3)", "Gobierno: Dataplex, policy tags, row access", "Operación: consultas programadas, alertas, DR, Terraform y CI"])
-card(12.0, 3.2, 9.9, 14.2, "Con qué datos", [
-    "REES46: 410 M eventos de navegación y compra, oct 2019 – abr 2020", "Olist: 99 470 pedidos y entregas en Brasil, 2016–2018",
-    "Octubre y noviembre vienen de Kaggle; diciembre a abril, del espejo del autor", "Cruce por categoría común (18 categorías, 13 en REES46)",
-    "Inventario derivado: supuesto de 50 unidades por producto y semana", "Todo se ejecutó sobre datos reales, no sintéticos"])
-card(22.5, 3.2, 9.9, 14.2, "Qué entregamos en P3", [
-    "Capa de exposición: 5 endpoints sobre tablas gold, con autenticación IAM", "Demo en vivo del pipeline de extremo a extremo",
-    "Calculadora de consumo del primer año con escenarios ×3 y ×10", "Repositorio estructurado en GitHub con tutorial reproducible",
-    "Documento de sustentación v3 (98 páginas) de la parte 2"])
+cols = [("Qué se implementó", "Batch y streaming", P, ["Bronze, silver y gold en BigQuery", "Plantilla de Dataflow y pipeline Beam propio",
+            "BigQuery ML y Looker Studio (7 páginas)", "Gobierno, alertas, DR, Terraform y CI"]),
+        ("Con qué datos", "410 M + 99 470", S, ["Eventos REES46, oct 2019 – abr 2020", "Pedidos Olist, Brasil 2016–2018",
+            "Cruce por 18 categorías comunes", "Datos reales, no sintéticos"]),
+        ("Qué entregamos en P3", "API + demo", A, ["5 endpoints con IAM sobre tablas gold", "Demo en vivo de extremo a extremo",
+            "Calculadora del año 1 (×3 y ×10)", "Repositorio y tutorial reproducible"])]
+for i, (head, big, col, items) in enumerate(cols):
+    x = 1.5 + i * 10.5
+    shp(x, 3.2, 9.9, 14.2, fill=LIGHT, preset="rect")
+    shp(x, 3.2, 9.9, 1.5, head, 17, "FFFFFF", True, "Georgia", fill=col, valign="middle", align="center")
+    shp(x + .3, 5.1, 9.3, 2.6, big, 26, col, True, "Georgia", align="center", valign="middle")
+    bullets(x + .5, 8.2, 8.9, 9.0, items, 17, "\n\n")
 footer()
 
 # 3 Situación actual
@@ -130,33 +140,38 @@ footer()
 
 # 6 Dependencias
 slide(); title("Dependencias, supuestos y fuera de scope")
-card(1.5, 3.2, 9.9, 14.2, "Dependencias", [
-    "Facturación de UTEC y créditos de GCP", "Espejo de REES46 (data.rees46.com) para dic–abr", "Token de Kaggle en Secret Manager para oct–nov",
-    "Red de oficina con inspección SSL: SSH solo por IAP, gRPC bloqueado", "Cuenta owner en gmail, porque la organización UTEC bloquea crear proyectos"])
-card(12.0, 3.2, 9.9, 14.2, "Supuestos", [
-    "Inventario derivado: 50 unidades por producto, se repone cada lunes", "70 M eventos al mes durante el año 1", "Streaming en ventanas pico (≈ 120 h al mes), no 24x7",
-    "Precios de lista de GCP, sin descuentos", "REES46 y Olist no son la misma tienda: el cruce es por categoría"], hfill=S)
-card(22.5, 3.2, 9.9, 14.2, "Fuera de scope", [
-    "Licencia comercial de los datos", "Reglas de negocio y datos de producción", "Enmascaramiento dinámico (exige organización GCP); solo hay denegación de columna",
-    "Aplicar Terraform: solo plan, nunca apply", "Alta disponibilidad multirregión"], hfill=MUT)
+card(1.5, 3.2, 9.9, 11.2, "Dependencias", [
+    "Facturación de UTEC y créditos de GCP", "Fuentes: Kaggle (oct–nov) y espejo REES46 (dic–abr)", "Red de oficina: SSH solo por IAP, gRPC bloqueado"], 18, sep="\n\n")
+card(12.0, 3.2, 9.9, 11.2, "Supuestos", [
+    "Inventario derivado: 50 unidades por producto y semana", "70 M eventos al mes; streaming ≈ 120 h al mes", "Precios de lista; REES46 y Olist se cruzan por categoría"], 18, hfill=S, sep="\n\n")
+card(22.5, 3.2, 9.9, 11.2, "Fuera de scope", [
+    "Licencia comercial y datos de producción", "Enmascaramiento dinámico (exige organización GCP)", "terraform apply y alta disponibilidad multirregión"], 18, hfill=MUT, sep="\n\n")
+shp(1.5, 15.1, 30.9, 2.2, "Lo que mueve la calculadora: volumen de eventos, horas de Dataflow y precios de lista", 20, "FFFFFF", True, fill=P, preset="rect", align="center", valign="middle")
 footer()
 
 # 7 Arquitectura final
 slide(); title("Arquitectura final")
-boxes = [("Orígenes", "CSV + replay"), ("Pub/Sub", "retención 7 d"), ("Dataflow", "UDF + Beam"), ("BigQuery", "bronze → gold"), ("API · Looker", "consumo")]
-w, g = 5.6, 0.7
-for i, (a, b) in enumerate(boxes):
-    x = 1.5 + i * (w + g)
-    shp(x, 3.4, w, 3.0, f"{a}\n{b}", 18, "FFFFFF", True, "Georgia", fill=P if i % 2 == 0 else S, preset="roundRect", align="center", valign="middle", name=f"B{i}")
-for i in range(4):
-    ops.append({"command": "add", "parent": f"/slide[{n}]", "type": "connector",
-                "props": {"from": f"/slide[{n}]/shape[@name=B{i}]", "to": f"/slide[{n}]/shape[@name=B{i+1}]", "shape": "straight", "color": TXT, "tailEnd": "triangle"}})
-card(1.5, 7.2, 9.9, 10.2, "Ingesta y proceso", ["Batch: VM efímera → Cloud Storage → bq load, con deduplicación", "Streaming: replay del pico a Pub/Sub; 2 jobs en paralelo, cada uno con su suscripción",
-    "Mensajes inválidos a events_deadletter", "Consultas programadas: 06:00 refresco incremental, 07:00 chequeos"], 13)
-card(12.0, 7.2, 9.9, 10.2, "Almacén y consumo", ["Silver: dims, fact_eventos, fact_pedidos, fact_inventario", "Gold: agg_*, ml_*, stream_categoria_minuto",
-    "BigQuery ML entrena ARIMA_PLUS por categoría", "Looker y la API leen solo gold, nunca events_raw"], 13, hfill=S)
-card(22.5, 7.2, 9.9, 10.2, "Transversal", ["Una cuenta de servicio por componente", "Secretos en Secret Manager", "Policy tags y row access policies",
-    "Dataplex: linaje y glosario", "Alertas por correo; snapshots y simulacro de DR", "Terraform y CI"], 13, hfill=MUT)
+for y, lab in ((2.9, "BATCH · carga histórica"), (7.7, "STREAMING · replay del pico")):
+    shp(1.5, y, 18.8, 4.5, fill=LIGHT, preset="rect")
+    shp(1.8, y + .05, 14, .8, lab, 11, MUT, True)
+lanes = [(3.8, P, "L", [("Fuentes", "Kaggle · espejo REES46 · Olist"), ("VM efímera", "descarga, limpia y sube"), ("Cloud Storage", "zona raw versionada")]),
+         (8.6, S, "R", [("Replay del pico", "script Python, 10x a 60x"), ("Pub/Sub", "rees46-events · 7 días"), ("Dataflow", "plantilla + UDF · Beam\ninválidos → deadletter")])]
+for y, col, k, items in lanes:
+    for i, (h_, sub) in enumerate(items):
+        node(1.8 + i * 6.4, y, 5.4, 3.3, h_, sub, col, f"{k}{i}")
+shp(21.2, 3.8, 5.6, 8.1, fill="2B3A4E", preset="roundRect", name="BQ")
+shp(21.3, 4.1, 5.4, 1.2, "BigQuery", 19, "FFFFFF", True, "Georgia", align="center", valign="middle")
+shp(21.5, 5.4, 5.0, 6.3, "bronze: events_raw\nsilver: dims y facts\ngold: agg_*, ml_*, stream_*\n\nBigQuery ML: ARIMA_PLUS\n\n06:00 refresco incremental\n07:00 chequeos ASSERT", 13, "E6EEF4", align="center")
+node(27.7, 3.8, 4.6, 3.3, "API", "Cloud Run privada\n5 endpoints", A, "API")
+node(27.7, 8.6, 4.6, 3.3, "Looker Studio", "7 páginas\nsolo tablas gold", A, "LK", 16)
+for k in "LR":
+    arrow(f"{k}0", f"{k}1"); arrow(f"{k}1", f"{k}2"); arrow(f"{k}2", "BQ")
+arrow("BQ", "API"); arrow("BQ", "LK")
+shp(1.5, 12.6, 20, .9, "Transversal", 15, P, True, "Georgia")
+chips = ["Una cuenta de servicio por componente", "Secretos en Secret Manager", "Policy tags y row access", "Dataplex: linaje y glosario",
+         "Alertas por correo", "Snapshots y simulacro de DR", "Terraform (52 recursos) y CI", "Presupuesto y teardown"]
+for i, c in enumerate(chips):
+    shp(1.5 + (i % 4) * 7.83, 13.6 + (i // 4) * 2.1, 7.3, 1.8, c, 14, TXT, fill=LIGHT, preset="roundRect", align="center", valign="middle")
 footer()
 
 # 6 Despliegue: scripts, Terraform y CI (observación 1 de la P2)
@@ -181,14 +196,13 @@ footer()
 # 8 Casos borde (observación 2 de la P2)
 slide(); title("Casos borde: duplicados y conciliación")
 card(1.5, 3.0, 10.2, 7.6, "Por qué aparecen", [
-    "Pub/Sub entrega al menos una vez y la plantilla no deduplica",
-    "El CSV de origen ya trae filas repetidas: el batch las quita con SELECT DISTINCT, el stream no",
-    "Repetir una ventana con la plantilla encendida la inserta dos veces"], 13)
+    "Pub/Sub entrega al menos una vez; la plantilla no deduplica",
+    "El CSV ya trae filas repetidas: el batch las quita, el stream no"], 16, sep="\n\n")
 table(12.3, 3.0, [7.6, 6.2, 6.2], [("Día del replay", "Eliminadas", "Quedan"),
     ("17/11 pico (10x)", "15 456", "6 379 921"), ("29/11 Black Friday (60x)", "3 606 (4 de Pub/Sub)", "1 850 824"),
     ("02/12 Cyber Monday (60x)", "2 634", "1 738 413"), ("Total", "21 696", "")], 13, 1.2)
-shp(12.3, 9.1, 20, 1.6, "Refresco diario sql/14 (06:00): ROW_NUMBER() sobre todas las columnas, solo filas stream, en una transacción. "
-    "Lo que queda coincide con los eventos distintos y pasan los 4 ASSERT de sql/15.", 12, P)
+shp(12.3, 9.1, 20, 1.6, "sql/14 (06:00): ROW_NUMBER() sobre todas las columnas, solo filas stream. "
+    "Quedan los eventos distintos; los 4 ASSERT de sql/15 pasan.", 14, P, True)
 steps = [("05 nov", "Plantilla + UDF: 3 replays, 9,99 M mensajes, 0 perdidos"), ("05 nov", "Storage Write API y deduplicación diaria"),
          ("06 nov", "Beam propio: valida, enriquece y agrega; 379 de 379 contra batch"), ("12 nov", "Relanzamiento: ventana repetida, limpieza con dedup_replay.sh"),
          ("17 → 21 nov", "Ensayo con API en Cloud Run; demo en vivo")]
@@ -240,13 +254,18 @@ footer()
 
 # 14 Conclusiones
 slide(); title("Conclusiones")
-bullets(1.5, 3.4, 30.8, 13.8, [
-    "La plataforma ingiere, transforma y expone datos de eCommerce sin perder mensajes: 0 de 9,99 M y 379 de 379 combinaciones conciliadas.",
-    "El costo estimado del primer año es de US$ 1 265 (≈ US$ 105 al mes), dominado por Dataflow; el real medido fue mucho menor.",
-    "La calidad de datos fue el hallazgo mayor: la taxonomía de REES46 cambió desde diciembre y se corrigió por producto.",
-    "El pronóstico necesita al menos un año de historia para superar al promedio simple; lo presentamos sin maquillarlo.",
-    "La API en Cloud Run cumple la capa de exposición: privada, con consultas parametrizadas y tope de costo.",
-    "Todo el despliegue es reproducible: tutorial paso a paso, Terraform y CI en el repositorio."], 19)
+tiles = [("0 de 9,99 M", "mensajes perdidos en los replays; 379 de 379 combinaciones conciliadas"),
+         ("US$ 105/mes", "costo estimado del año 1 (US$\u00a01\u00a0265), dominado por Dataflow; el real fue mucho menor"),
+         ("76 %", "de las compras de diciembre con categoría contradictoria: la taxonomía cambió y se corrigió por producto"),
+         ("36 % vs 20 %", "error del pronóstico frente al promedio simple: falta un año de historia, y lo mostramos tal cual"),
+         ("5 endpoints", "API privada en Cloud Run: IAM, consultas parametrizadas y tope de 10 GB"),
+         ("52 recursos", "bajo Terraform, con tutorial y CI en el repositorio: despliegue reproducible")]
+for i, (big, t) in enumerate(tiles):
+    x, y = 1.5 + (i % 3) * 10.45, 3.3 + (i // 3) * 7.2
+    shp(x, y, 9.9, 6.7, fill=LIGHT, preset="rect")
+    shp(x, y, .25, 6.7, fill=A)
+    shp(x + .6, y + .5, 9.0, 2.2, big, 34, P, True, "Georgia", valign="middle")
+    shp(x + .6, y + 2.9, 9.0, 3.6, t, 17)
 shp(0, 0, 0.6, 19.05, fill=A)
 footer()
 
