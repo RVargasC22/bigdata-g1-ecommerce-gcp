@@ -8,11 +8,6 @@ IMG = str((HERE / ".." / "tutorial" / "img").resolve())
 P, S, A, TXT, MUT, LIGHT = "065A82", "1C7293", "E8A33D", "2B3A4E", "6B8FAA", "EEF4F8"
 ops = []
 n = 0
-spk = ""
-
-def who(t):
-    """Speaker and target time, prepended to the slide notes."""
-    global spk; spk = f"[{t}] "
 
 def slide(bg="FFFFFF"):
     global n; n += 1
@@ -29,9 +24,6 @@ def shp(x, y, w, h, text="", size=15, color=TXT, bold=False, font="Calibri", fil
 
 def title(t):
     shp(1.5, 0.8, 30.8, 1.9, t, 34, P, True, "Georgia", valign="middle")
-
-def notes(t):
-    ops.append({"command": "add", "parent": f"/slide[{n}]", "type": "notes", "props": {"text": spk + t}})
 
 def footer():
     shp(1.5, 18.0, 24, 0.8, "Grupo 1 · Big Data · UTEC Posgrado · P3", 10, MUT)
