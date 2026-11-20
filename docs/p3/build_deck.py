@@ -67,6 +67,7 @@ shp(3, 5.2, 28, 4.2, "Plataforma eCommerce en Google Cloud", 44, "FFFFFF", True,
 shp(3, 9.6, 28, 1.8, "Exposición de datos, demo end-to-end y sustentación (P3)", 24, "CADCFC")
 shp(3, 13.0, 28, 1.2, "Grupo 1 · Big Data · UTEC Posgrado", 18, "FFFFFF")
 shp(3, 14.4, 28, 1.2, "21 de noviembre de 2026 · Proyecto bigdata-g1-ecommerce-1105", 18, "CADCFC")
+shp(3, 15.8, 28, 1.2, "Repositorio: github.com/RVargasC22/bigdata-g1-ecommerce-gcp", 18, "FFFFFF")
 
 # 2 Resumen ejecutivo
 slide(); title("Resumen ejecutivo y alcance")
