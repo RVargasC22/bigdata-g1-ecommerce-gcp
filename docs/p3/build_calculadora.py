@@ -85,4 +85,6 @@ for cell in k[1]: cell.font = bold; cell.fill = hdr
 for col, w in zip("ABCD", (26, 24, 26, 60)): k.column_dimensions[col].width = w
 for r in range(2, 5): k.cell(r,3).number_format = '#,##0'
 k.append([]); k.append(["Aproximación lineal: ignora capas gratuitas y descuentos por compromiso. Referencia medida: facturación real 1–6 nov 2026 = S/ 8,75 bruto, cubierta por créditos."])
+wb.properties.creator = wb.properties.lastModifiedBy = "Grupo 1 - Big Data UTEC"
+wb.properties.title = "Calculadora de consumo - año 1"
 wb.save(Path(__file__).with_name("calculadora_consumo.xlsx"))
